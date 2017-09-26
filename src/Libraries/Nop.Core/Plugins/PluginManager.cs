@@ -74,6 +74,11 @@ namespace Nop.Core.Plugins
         public static IEnumerable<string> IncompatiblePlugins { get; set; }
 
         /// <summary>
+        /// Returns a collection of all plugin which are have wrong directory
+        /// </summary>
+        public static IEnumerable<string> WrongPluginDirectories { get; set; }
+
+        /// <summary>
         /// Initialize
         /// </summary>
         /// <param name="applicationPartManager">Application part manager</param>
@@ -96,7 +101,8 @@ namespace Nop.Core.Plugins
 
                 var referencedPlugins = new List<PluginDescriptor>();
                 var incompatiblePlugins = new List<string>();
-                
+                var wrongPluginDirectories = new List<string>();
+
                 try
                 {
                     var installedPluginSystemNames = PluginFileParser.ParseInstalledPluginsFile(GetInstalledPluginsFilePath());
@@ -170,7 +176,10 @@ namespace Nop.Core.Plugins
                             var mainPluginFile = pluginFiles
                                 .FirstOrDefault(x => x.Name.Equals(pluginDescriptor.PluginFileName, StringComparison.InvariantCultureIgnoreCase));
                             if (mainPluginFile == null)
-                                throw new Exception($"{pluginDescriptor.PluginFileName} cannot be loaded");
+                            {
+                                wrongPluginDirectories.Add(pluginDescriptor.SystemName);
+                                continue;
+                            }
 
                             pluginDescriptor.OriginalAssemblyFile = mainPluginFile;
 
@@ -228,6 +237,7 @@ namespace Nop.Core.Plugins
 
                 ReferencedPlugins = referencedPlugins;
                 IncompatiblePlugins = incompatiblePlugins;
+                WrongPluginDirectories = wrongPluginDirectories;
 
             }
         }

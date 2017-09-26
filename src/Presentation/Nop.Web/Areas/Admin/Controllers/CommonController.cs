@@ -392,6 +392,15 @@ namespace Nop.Web.Areas.Admin.Controllers
                         Text = string.Format(_localizationService.GetResource("Admin.System.Warnings.IncompatiblePlugin"), pluginName)
                     });
 
+            //plugins with wrong directory
+            if (PluginManager.WrongPluginDirectories != null)
+                foreach (var pluginName in PluginManager.WrongPluginDirectories)
+                    model.Add(new SystemWarningModel
+                    {
+                        Level = SystemWarningLevel.Warning,
+                        Text = string.Format(_localizationService.GetResource("Admin.System.Warnings.WrongPluginDirectory"), pluginName)
+                    });
+
             //performance settings
             if (!_catalogSettings.IgnoreStoreLimitations && _storeService.GetAllStores().Count == 1)
             {

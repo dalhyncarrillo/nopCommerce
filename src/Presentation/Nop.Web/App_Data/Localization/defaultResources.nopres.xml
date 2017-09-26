@@ -13170,6 +13170,9 @@
   <LocaleResource Name="Admin.System.Warnings.URL.Reserved">
     <Value>Entered page name already exists, so it will be replaced by '{0}'</Value>
   </LocaleResource>
+  <LocaleResource Name="Admin.System.Warnings.WrongPluginDirectory">
+    <Value>'{0}' plugin has a wrong directory. Delete or reload it.</Value>
+  </LocaleResource>
   <LocaleResource Name="Admin.Vendors">
     <Value>Vendors</Value>
   </LocaleResource>

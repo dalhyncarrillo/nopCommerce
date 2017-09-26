@@ -325,7 +325,10 @@ set @resources='
   </LocaleResource>
   <LocaleResource Name="Sitemap.ProductTags">
     <Value>Product tags</Value>
-  </LocaleResource>   
+  </LocaleResource> 
+  <LocaleResource Name="Admin.System.Warnings.WrongPluginDirectory">
+    <Value>''{0}'' plugin has a wrong directory. Delete or reload it.</Value>
+  </LocaleResource>  
 </Language>
 '
 
