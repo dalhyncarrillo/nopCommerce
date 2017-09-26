@@ -134,6 +134,6 @@ namespace Nop.Services.Catalog
         /// </summary>
         /// <param name="categoryIds">Category identifiers</param>
         /// <returns>Categories</returns>
-        List<Category> GetCategoryByIds(int [] categoryIds);
+        List<Category> GetCategoriesByIds(int [] categoryIds);
     }
 }

@@ -640,7 +640,7 @@ namespace Nop.Services.ExportImport
             if (_catalogSettings.ExportImportCategoriesUsingCategoryName)
             {
                 //performance optimization, load all parent categories in one SQL request
-                parentCatagories = _categoryService.GetCategoryByIds(categories.Select(c => c.ParentCategoryId).Where(id => id != 0).ToArray());
+                parentCatagories = _categoryService.GetCategoriesByIds(categories.Select(c => c.ParentCategoryId).Where(id => id != 0).ToArray());
             }
 
             //property array

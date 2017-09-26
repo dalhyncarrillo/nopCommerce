@@ -680,7 +680,7 @@ namespace Nop.Services.Catalog
         /// </summary>
         /// <param name="categoryIds">Category identifiers</param>
         /// <returns>Categories</returns>
-        public virtual List<Category> GetCategoryByIds(int[] categoryIds)
+        public virtual List<Category> GetCategoriesByIds(int[] categoryIds)
         {
             if (categoryIds == null || categoryIds.Length == 0)
                 return new List<Category>();
