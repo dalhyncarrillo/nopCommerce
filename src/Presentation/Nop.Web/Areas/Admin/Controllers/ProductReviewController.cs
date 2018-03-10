@@ -3,17 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Nop.Web.Areas.Admin.Models.Catalog;
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Customers;
 using Nop.Services.Catalog;
+using Nop.Services.Common;
 using Nop.Services.Events;
 using Nop.Services.Helpers;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
+using Nop.Services.Messages;
 using Nop.Services.Security;
 using Nop.Services.Stores;
+using Nop.Web.Areas.Admin.Models.Catalog;
 using Nop.Web.Framework.Kendoui;
 using Nop.Web.Framework.Mvc.Filters;
 
@@ -23,6 +25,7 @@ namespace Nop.Web.Areas.Admin.Controllers
     {
         #region Fields
 
+        private readonly CatalogSettings _catalogSettings;
         private readonly IProductService _productService;
         private readonly IDateTimeHelper _dateTimeHelper;
         private readonly ILocalizationService _localizationService;
@@ -31,20 +34,24 @@ namespace Nop.Web.Areas.Admin.Controllers
         private readonly IStoreService _storeService;
         private readonly ICustomerActivityService _customerActivityService;
         private readonly IWorkContext _workContext;
+        private readonly IWorkflowMessageService _workflowMessageService;
 
         #endregion Fields
 
-        #region Constructors
+        #region Ctor
 
-        public ProductReviewController(IProductService productService, 
+        public ProductReviewController(CatalogSettings catalogSettings,
+            IProductService productService, 
             IDateTimeHelper dateTimeHelper,
             ILocalizationService localizationService, 
             IPermissionService permissionService,
             IEventPublisher eventPublisher,
             IStoreService storeService,
             ICustomerActivityService customerActivityService,
-            IWorkContext workContext)
+            IWorkContext workContext,
+            IWorkflowMessageService workflowMessageService)
         {
+            this._catalogSettings = catalogSettings;
             this._productService = productService;
             this._dateTimeHelper = dateTimeHelper;
             this._localizationService = localizationService;
@@ -53,6 +60,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             this._storeService = storeService;
             this._customerActivityService = customerActivityService;
             this._workContext = workContext;
+            this._workflowMessageService = workflowMessageService;
         }
 
         #endregion
@@ -95,7 +103,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             //a vendor should have access only to his products
             model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
-
         }
 
         #endregion
@@ -113,9 +120,11 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProductReviews))
                 return AccessDeniedView();
 
-            var model = new ProductReviewListModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
+            var model = new ProductReviewListModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null
+            };
 
             model.AvailableStores.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
             var stores = _storeService.GetAllStores().Select(st => new SelectListItem() { Text = st.Name, Value = st.Id.ToString() });
@@ -146,10 +155,10 @@ namespace Nop.Web.Areas.Admin.Controllers
                 vendorId = _workContext.CurrentVendor.Id;
             }
 
-            DateTime? createdOnFromValue = (model.CreatedOnFrom == null) ? null
+            var createdOnFromValue = (model.CreatedOnFrom == null) ? null
                             : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.CreatedOnFrom.Value, _dateTimeHelper.CurrentTimeZone);
 
-            DateTime? createdToFromValue = (model.CreatedOnTo == null) ? null
+            var createdToFromValue = (model.CreatedOnTo == null) ? null
                             : (DateTime?)_dateTimeHelper.ConvertToUtcTime(model.CreatedOnTo.Value, _dateTimeHelper.CurrentTimeZone).AddDays(1);
 
             bool? approved = null;
@@ -158,7 +167,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             var productReviews = _productService.GetAllProductReviews(0, approved, 
                 createdOnFromValue, createdToFromValue, model.SearchText, 
-                model.SearchStoreId, model.SearchProductId, vendorId, 
+                model.SearchStoreId, model.SearchProductId, vendorId, true,
                 command.Page - 1, command.PageSize);
 
             var gridModel = new DataSourceResult
@@ -224,10 +233,22 @@ namespace Nop.Web.Areas.Admin.Controllers
                 }
 
                 productReview.ReplyText = model.ReplyText;
+
+                //notify customer about reply
+                if (productReview.IsApproved && !string.IsNullOrEmpty(productReview.ReplyText) 
+                    && _catalogSettings.NotifyCustomerAboutProductReviewReply && !productReview.CustomerNotifiedOfReply)
+                {
+                    var customerLanguageId = productReview.Customer.GetAttribute<int>(SystemCustomerAttributeNames.LanguageId, productReview.StoreId);
+                    var queuedEmailIds = _workflowMessageService.SendProductReviewReplyCustomerNotificationMessage(productReview, customerLanguageId);
+                    if (queuedEmailIds.Any())
+                        productReview.CustomerNotifiedOfReply = true;
+                }
+
                 _productService.UpdateProduct(productReview.Product);
 
                 //activity log
-                _customerActivityService.InsertActivity("EditProductReview", _localizationService.GetResource("ActivityLog.EditProductReview"), productReview.Id);
+                _customerActivityService.InsertActivity("EditProductReview",
+                   string.Format(_localizationService.GetResource("ActivityLog.EditProductReview"), productReview.Id), productReview);
 
                 //vendor can edit "Reply text" only
                 if (!isLoggedInAsVendor)
@@ -272,7 +293,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _productService.DeleteProductReview(productReview);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteProductReview", _localizationService.GetResource("ActivityLog.DeleteProductReview"), productReview.Id);
+            _customerActivityService.InsertActivity("DeleteProductReview",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteProductReview"), productReview.Id), productReview);
 
             //update product totals
             _productService.UpdateProductReviewTotals(product);
@@ -371,7 +393,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return Content("");
 
             const int searchTermMinimumLength = 3;
-            if (String.IsNullOrWhiteSpace(term) || term.Length < searchTermMinimumLength)
+            if (string.IsNullOrWhiteSpace(term) || term.Length < searchTermMinimumLength)
                 return Content("");
 
             //a vendor should have access only to his products

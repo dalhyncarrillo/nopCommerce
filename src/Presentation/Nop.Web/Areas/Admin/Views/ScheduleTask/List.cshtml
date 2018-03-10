@@ -1,4 +1,5 @@
 ﻿@using System.Text.Encodings.Web
+
 @{
     //page title
     ViewBag.Title = T("Admin.System.ScheduleTasks").Text;
@@ -13,10 +14,11 @@
     </h1>
     <div class="pull-right">
         &nbsp;
+        @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ScheduleTaskListButtons })
     </div>
 </div>
 
-<script type="text/javascript">
+<script>
     $(document).ready(function () {
         $("#schedule-tasks-grid").on("click", ".run-now", function (e) {
             showThrobber('@Html.Raw(JavaScriptEncoder.Default.Encode(T("Admin.System.ScheduleTasks.RunNow.Progress").Text))');

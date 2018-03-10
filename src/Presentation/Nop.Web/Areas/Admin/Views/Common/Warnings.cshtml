@@ -1,4 +1,4 @@
-﻿@model IList<SystemWarningModel>
+@model IList<SystemWarningModel>
 
 @{
     //page title
@@ -13,12 +13,14 @@
     </h1>
     <div class="pull-right">
         &nbsp;
+        @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.WarningsButtons })
     </div>
 </div>
 
 <div class="content">
     <div class="form-horizontal">
         <div class="panel-group">
+            @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.WarningsTop })
             <div class="panel panel-default">
                 <div class="panel-body">
                     @foreach (var warning in Model)
@@ -53,6 +55,7 @@
                     }
                 </div>
             </div>
+            @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.WarningsBottom })
         </div>
     </div>
 </div>

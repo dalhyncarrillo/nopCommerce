@@ -1,6 +1,7 @@
-﻿@model AddressAttributeModel
+@model AddressAttributeModel
 
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.AddressAttributeDetailsValuesTop, additionalData = Model })
     <div class="panel panel-default">
         @if (Model.Id > 0)
         {
@@ -93,7 +94,7 @@
                     @T("Admin.Address.AddressAttributes.Values.AddNew")
                 </button>
                 <input type="submit" id="btnRefresh" style="display: none" />
-                <script type="text/javascript">
+                <script>
                     $(document).ready(function () {
                         $('#btnRefresh').click(function () {
                             //refresh grid
@@ -114,4 +115,5 @@
             </div>
         }
     </div>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.AddressAttributeDetailsValuesBottom, additionalData = Model })
 </div>

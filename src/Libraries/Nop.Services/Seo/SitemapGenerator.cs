@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -56,6 +57,23 @@ namespace Nop.Services.Seo
 
         #region Ctor
 
+        /// <summary>
+        /// Ctor
+        /// </summary>
+        /// <param name="storeContext">Store context</param>
+        /// <param name="categoryService">Category service</param>
+        /// <param name="productService">Product service</param>
+        /// <param name="manufacturerService">Manufacturer service</param>
+        /// <param name="topicService">Topic service</param>
+        /// <param name="webHelper">Web helper</param>
+        /// <param name="urlHelperFactory">URL g=helper factory</param>
+        /// <param name="actionContextAccessor">Action context accessor</param>
+        /// <param name="commonSettings">Common settings</param>
+        /// <param name="blogSettings">Blog settings</param>
+        /// <param name="newsSettings">News settings</param>
+        /// <param name="forumSettings">Forum settings</param>
+        /// <param name="securitySettings">Security settings</param>
+        /// <param name="productTagService">Product tag service</param>
         public SitemapGenerator(IStoreContext storeContext,
             ICategoryService categoryService,
             IProductService productService,
@@ -96,6 +114,12 @@ namespace Nop.Services.Seo
         /// </summary>
         protected class SitemapUrl
         {
+            /// <summary>
+            /// Ctor
+            /// </summary>
+            /// <param name="location">URL of the page</param>
+            /// <param name="frequency">Update frequency</param>
+            /// <param name="updatedOn">Updated on</param>
             public SitemapUrl(string location, UpdateFrequency frequency, DateTime updatedOn)
             {
                 Location = location;
@@ -185,7 +209,7 @@ namespace Nop.Services.Seo
 
             //categories
             if (_commonSettings.SitemapIncludeCategories)
-                sitemapUrls.AddRange(GetCategoryUrls(0));
+                sitemapUrls.AddRange(GetCategoryUrls());
 
             //manufacturers
             if (_commonSettings.SitemapIncludeManufacturers)
@@ -211,26 +235,21 @@ namespace Nop.Services.Seo
         /// <summary>
         /// Get category URLs for the sitemap
         /// </summary>
-        /// <param name="parentCategoryId">Parent category identifier</param>
-        /// <returns>Collection of sitemap URLs</returns>
-        protected virtual IEnumerable<SitemapUrl> GetCategoryUrls(int parentCategoryId)
+        /// <returns>Sitemap URLs</returns>
+        protected virtual IEnumerable<SitemapUrl> GetCategoryUrls()
         {
             var urlHelper = GetUrlHelper();
-            return _categoryService.GetAllCategoriesByParentCategoryId(parentCategoryId).SelectMany(category =>
+            return _categoryService.GetAllCategories().Select(category =>
             {
-                var sitemapUrls = new List<SitemapUrl>();
                 var url = urlHelper.RouteUrl("Category", new { SeName = category.GetSeName() }, GetHttpProtocol());
-                sitemapUrls.Add(new SitemapUrl(url, UpdateFrequency.Weekly, category.UpdatedOnUtc));
-                sitemapUrls.AddRange(GetCategoryUrls(category.Id));
-
-                return sitemapUrls;
+                return new SitemapUrl(url, UpdateFrequency.Weekly, category.UpdatedOnUtc);
             });
         }
 
         /// <summary>
         /// Get manufacturer URLs for the sitemap
         /// </summary>
-        /// <returns>Collection of sitemap URLs</returns>
+        /// <returns>Sitemap URLs</returns>
         protected virtual IEnumerable<SitemapUrl> GetManufacturerUrls()
         {
             var urlHelper = GetUrlHelper();
@@ -244,7 +263,7 @@ namespace Nop.Services.Seo
         /// <summary>
         /// Get product URLs for the sitemap
         /// </summary>
-        /// <returns>Collection of sitemap URLs</returns>
+        /// <returns>Sitemap URLs</returns>
         protected virtual IEnumerable<SitemapUrl> GetProductUrls()
         {
             var urlHelper = GetUrlHelper();
@@ -256,6 +275,10 @@ namespace Nop.Services.Seo
             });
         }
 
+        /// <summary>
+        /// Get product tag URLs for the sitemap
+        /// </summary>
+        /// <returns>Sitemap URLs</returns>
         protected virtual IEnumerable<SitemapUrl> GetProductTagUrls()
         {
             var urlHelper = GetUrlHelper();
@@ -269,7 +292,7 @@ namespace Nop.Services.Seo
         /// <summary>
         /// Get topic URLs for the sitemap
         /// </summary>
-        /// <returns>Collection of sitemap URLs</returns>
+        /// <returns>Sitemap URLs</returns>
         protected virtual IEnumerable<SitemapUrl> GetTopicUrls()
         {
             var urlHelper = GetUrlHelper();
@@ -283,7 +306,7 @@ namespace Nop.Services.Seo
         /// <summary>
         /// Get custom URLs for the sitemap
         /// </summary>
-        /// <returns>Collection of sitemap URLs</returns>
+        /// <returns>Sitemap URLs</returns>
         protected virtual IEnumerable<SitemapUrl> GetCustomUrls()
         {
             var storeLocation = _webHelper.GetStoreLocation();
@@ -350,7 +373,7 @@ namespace Nop.Services.Seo
 
                     writer.WriteElementString("loc", location);
                     writer.WriteElementString("changefreq", url.UpdateFrequency.ToString().ToLowerInvariant());
-                    writer.WriteElementString("lastmod", url.UpdatedOn.ToString(DateFormat));
+                    writer.WriteElementString("lastmod", url.UpdatedOn.ToString(DateFormat, CultureInfo.InvariantCulture));
                     writer.WriteEndElement();
                 }
 

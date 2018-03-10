@@ -21,6 +21,7 @@
             <i class="fa fa-plus-square"></i>
             @T("Admin.Common.AddNew")
         </a>
+        @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.VendorListButtons })
     </div>
 </div>
 
@@ -119,7 +120,7 @@
                             });
                         });
                     </script>
-                    <script type="text/javascript">
+                    <script>
                         $(document).ready(function () {
                             //search button
                             $('#search-vendors').click(function () {

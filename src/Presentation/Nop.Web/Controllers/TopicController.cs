@@ -23,7 +23,7 @@ namespace Nop.Web.Controllers
 
         #endregion
 
-        #region Constructors
+        #region Ctor
 
         public TopicController(ITopicModelFactory topicModelFactory,
             ITopicService topicService,
@@ -72,7 +72,6 @@ namespace Nop.Web.Controllers
             var templateViewPath = _topicModelFactory.PrepareTemplateViewPath(model.TopicTemplateId);
             return PartialView(templateViewPath, model);
         }
-
 
         [HttpPost]
         [PublicAntiForgery]

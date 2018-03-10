@@ -1,6 +1,7 @@
-﻿@model OrderModel
+@model OrderModel
 
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.OrderDetailsNotesTop, additionalData = Model })
     <div class="panel panel-default">
         <div class="panel-body">
             <div id="ordernotes-grid"></div>
@@ -97,7 +98,7 @@
     </div>
 
     <div class="panel panel-default">
-        <script type="text/javascript">
+        <script>
             $(document).ready(function () {
                 $("#@Html.IdFor(model => model.AddOrderNoteHasDownload)").change(toggleAddOrderNoteHasDownload);
                 toggleAddOrderNoteHasDownload();
@@ -160,9 +161,10 @@
             </div>
         </div>
     </div>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.OrderDetailsNotesBottom, additionalData = Model })
 </div>
 
-<script type="text/javascript">
+<script>
     $(document).ready(function () {
         $('#addOrderNote').click(function () {
             var orderNoteMessage = $("#@Html.IdFor(model => model.AddOrderNoteMessage)").val();

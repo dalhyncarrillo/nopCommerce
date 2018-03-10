@@ -1,4 +1,4 @@
-﻿@model DiscountListModel
+@model DiscountListModel
 @inject AdminAreaSettings adminAreaSetting
 @{
     var defaultGridPageSize = adminAreaSetting.DefaultGridPageSize;
@@ -20,6 +20,7 @@
             <i class="fa fa-plus-square"></i>
             @T("Admin.Common.AddNew")
         </a>
+        @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.DiscountListButtons })
     </div>
 </div>
 
@@ -52,6 +53,22 @@
                                 </div>
                                 <div class="col-md-8">
                                     <nop-select asp-for="SearchDiscountTypeId" asp-items="Model.AvailableDiscountTypes"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-md-4">
+                                    <nop-label asp-for="SearchStartDate"/>
+                                </div>
+                                <div class="col-md-8">
+                                    <nop-editor asp-for="SearchStartDate"/>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="col-md-4">
+                                    <nop-label asp-for="SearchEndDate"/>
+                                </div>
+                                <div class="col-md-8">
+                                    <nop-editor asp-for="SearchEndDate"/>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -151,7 +168,7 @@
                             });
                         });
                     </script>
-                    <script type="text/javascript">
+                    <script>
                         $(document).ready(function() {
                             $('#search-discounts').click(function() {
                                 var grid = $('#discounts-grid').data('kendoGrid');
@@ -167,13 +184,15 @@
                                     $("#search-discounts").click();
                                     return false;
                                 }
-                            });
+                        });
 
                         function additionalData() {
                             var data = {
                                 SearchDiscountTypeId: $('#@Html.IdFor(model => model.SearchDiscountTypeId)').val(),
                                 SearchDiscountCouponCode: $('#@Html.IdFor(model => model.SearchDiscountCouponCode)').val(),
-                                SearchDiscountName: $('#@Html.IdFor(model => model.SearchDiscountName)').val()
+                                SearchDiscountName: $('#@Html.IdFor(model => model.SearchDiscountName)').val(),
+                                SearchStartDate: $('#@Html.IdFor(model => model.SearchStartDate)').val(),
+                                SearchEndDate: $('#@Html.IdFor(model => model.SearchEndDate)').val(),
                             };
                             addAntiForgeryToken(data);
                             return data;

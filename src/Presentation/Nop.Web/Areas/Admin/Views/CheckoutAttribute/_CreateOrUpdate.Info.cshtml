@@ -2,7 +2,7 @@
 @using Nop.Core.Domain.Catalog
 @using Nop.Services
 
-<script type="text/javascript">
+<script>
     $(document).ready(function() {
 
         $("#@Html.IdFor(model => model.IsTaxExempt)").click(toggleTax);
@@ -64,6 +64,7 @@
 </script>
 
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.CheckoutAttributeDetailsInfoTop, additionalData = Model })
     <div class="panel panel-default">
         <div class="panel-body">
             @(Html.LocalizedEditor<CheckoutAttributeModel, CheckoutAttributeLocalizedModel>("checkoutattribute-localized",
@@ -254,4 +255,5 @@
             </div>
         </div>
     </div>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.CheckoutAttributeDetailsInfoBottom, additionalData = Model })
 </div>

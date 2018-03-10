@@ -169,7 +169,6 @@ namespace Nop.Services.Catalog
             return _specificationAttributeOptionRepository.GetById(specificationAttributeOptionId);
         }
 
-
         /// <summary>
         /// Get specification attribute options by identifiers
         /// </summary>
@@ -186,7 +185,7 @@ namespace Nop.Services.Catalog
             var specificationAttributeOptions = query.ToList();
             //sort by passed identifiers
             var sortedSpecificationAttributeOptions = new List<SpecificationAttributeOption>();
-            foreach (int id in specificationAttributeOptionIds)
+            foreach (var id in specificationAttributeOptionIds)
             {
                 var sao = specificationAttributeOptions.Find(x => x.Id == id);
                 if (sao != null)
@@ -309,8 +308,8 @@ namespace Nop.Services.Catalog
         public virtual IList<ProductSpecificationAttribute> GetProductSpecificationAttributes(int productId = 0,
             int specificationAttributeOptionId = 0, bool? allowFiltering = null, bool? showOnProductPage = null)
         {
-            string allowFilteringCacheStr = allowFiltering.HasValue ? allowFiltering.ToString() : "null";
-            string showOnProductPageCacheStr = showOnProductPage.HasValue ? showOnProductPage.ToString() : "null";
+            var allowFilteringCacheStr = allowFiltering.HasValue ? allowFiltering.ToString() : "null";
+            var showOnProductPageCacheStr = showOnProductPage.HasValue ? showOnProductPage.ToString() : "null";
             var key = string.Format(PRODUCTSPECIFICATIONATTRIBUTE_ALLBYPRODUCTID_KEY, 
                 productId, specificationAttributeOptionId, allowFilteringCacheStr, showOnProductPageCacheStr);
             
@@ -394,6 +393,23 @@ namespace Nop.Services.Catalog
                 query = query.Where(psa => psa.SpecificationAttributeOptionId == specificationAttributeOptionId);
 
             return query.Count();
+        }
+
+        /// <summary>
+        /// Get mapped products for specification attribute
+        /// </summary>
+        /// <param name="specificationAttributeId">The specification attribute identifier</param>
+        /// <param name="pageIndex">Page index</param>
+        /// <param name="pageSize">Page size</param>
+        /// <returns>Products</returns>
+        public virtual IPagedList<Product> GetProductsBySpecificationAttributeId(int specificationAttributeId, int pageIndex, int pageSize)
+        {
+            var query = _productSpecificationAttributeRepository.Table;
+
+            var products = query.Where(psa => psa.SpecificationAttributeOption.SpecificationAttributeId == specificationAttributeId)
+                .Select(psa => psa.Product).Distinct().OrderBy(p => p.Name);
+
+            return new PagedList<Product>(products, pageIndex, pageSize);
         }
 
         #endregion

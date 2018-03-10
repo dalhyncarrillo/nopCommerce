@@ -24,7 +24,9 @@
                 <div class="panel-body">
                     <div class="row">
                         <div class="col-md-6">
-                            @T("Admin.Configuration.Plugins.OfficialFeed.Instructions")
+                            <p>
+                                @T("Admin.Configuration.Plugins.OfficialFeed.Instructions")
+                            </p>
                             <div class="form-group">
                                 <div class="col-md-4">
                                     <nop-label asp-for="SearchName" />
@@ -152,7 +154,7 @@
 
                 <div>
                     <input type="submit" id="btnRefresh" style="display: none" />
-                    <script type="text/javascript">
+                    <script>
                         $(document).ready(function () {
                             $('#btnRefresh').click(function () {
                                 //refresh grid
@@ -165,7 +167,7 @@
                             });
                         });
                     </script>
-                    <script type="text/javascript">
+                    <script>
                         $(document).ready(function () {
                             //search button
                             $('#search-plugins').click(function () {

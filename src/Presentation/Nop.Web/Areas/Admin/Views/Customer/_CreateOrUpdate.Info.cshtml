@@ -2,7 +2,7 @@
 @model CustomerModel
 @if (Model.CountryEnabled && Model.StateProvinceEnabled)
 {
-    <script type="text/javascript">
+    <script>
         $(document).ready(function() {
             $("#@Html.IdFor(model => model.CountryId)").change(function() {
                 var selectedItem = $(this).val();
@@ -33,6 +33,7 @@
     </script>
 }
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.CustomerDetailsInfoTop, additionalData = Model })
     <div class="panel panel-default">
         <div class="panel-body">
             @if (Model.UsernamesEnabled)
@@ -88,7 +89,7 @@
 
                             //local datasource
                             var externalauthrecords = [
-                            @for (int i = 0; i < Model.AssociatedExternalAuthRecords.Count; i++)
+                            @for (var i = 0; i < Model.AssociatedExternalAuthRecords.Count; i++)
                             {
                                 var aear = Model.AssociatedExternalAuthRecords[i];
                                 <text>
@@ -316,6 +317,18 @@
                     </div>
                 </div>
             }
+            @if (Model.CountyEnabled)
+            {
+                <div class="form-group">
+                    <div class="col-md-3">
+                        <nop-label asp-for="County" />
+                    </div>
+                    <div class="col-md-9">
+                        <nop-editor asp-for="County" />
+                        <span asp-validation-for="County"></span>
+                    </div>
+                </div>
+            }
             @if (Model.CountryEnabled)
             {
                 <div class="form-group">
@@ -507,7 +520,7 @@
                     </div>
                 </div>
             }
-            @if (Model.Id > 0 && !String.IsNullOrEmpty(Model.LastVisitedPage))
+            @if (Model.Id > 0 && !string.IsNullOrEmpty(Model.LastVisitedPage))
             {
                 <div class="form-group">
                     <div class="col-md-3">
@@ -520,4 +533,5 @@
             }
         </div>
     </div>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.CustomerDetailsInfoBottom, additionalData = Model })
 </div>

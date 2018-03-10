@@ -1,13 +1,14 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
-using Nop.Web.Areas.Admin.Extensions;
-using Nop.Web.Areas.Admin.Models.ExternalAuthentication;
 using Nop.Core.Domain.Customers;
 using Nop.Core.Plugins;
 using Nop.Services.Authentication.External;
 using Nop.Services.Configuration;
+using Nop.Services.Plugins;
 using Nop.Services.Security;
+using Nop.Web.Areas.Admin.Extensions;
+using Nop.Web.Areas.Admin.Models.ExternalAuthentication;
 using Nop.Web.Framework.Kendoui;
 using Nop.Web.Framework.Mvc;
 
@@ -15,8 +16,8 @@ namespace Nop.Web.Areas.Admin.Controllers
 {
     public partial class ExternalAuthenticationController : BaseAdminController
 	{
-		#region Fields
-
+        #region Fields
+        
         private readonly IExternalAuthenticationService _externalAuthenticationService;
         private readonly ExternalAuthenticationSettings _externalAuthenticationSettings;
         private readonly ISettingService _settingService;
@@ -32,7 +33,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             ISettingService settingService,
             IPermissionService permissionService,
             IPluginFinder pluginFinder)
-		{
+        {
             this._externalAuthenticationService = externalAuthenticationService;
             this._externalAuthenticationSettings = externalAuthenticationSettings;
             this._settingService = settingService;
@@ -104,9 +105,12 @@ namespace Nop.Web.Areas.Admin.Controllers
             }
             var pluginDescriptor = eam.PluginDescriptor;
             pluginDescriptor.DisplayOrder = model.DisplayOrder;
-            PluginFileParser.SavePluginDescriptionFile(pluginDescriptor);
+
+            //update the description file
+            PluginManager.SavePluginDescriptor(pluginDescriptor);
+
             //reset plugin cache
-            _pluginFinder.ReloadPlugins();
+            _pluginFinder.ReloadPlugins(pluginDescriptor);
 
             return new NullJsonResult();
         }

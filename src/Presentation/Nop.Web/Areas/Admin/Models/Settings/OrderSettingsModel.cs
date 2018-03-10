@@ -7,7 +7,6 @@ namespace Nop.Web.Areas.Admin.Models.Settings
     {
         public int ActiveStoreScopeConfiguration { get; set; }
 
-
         [NopResourceDisplayName("Admin.Configuration.Settings.Order.IsReOrderAllowed")]
         public bool IsReOrderAllowed { get; set; }
         public bool IsReOrderAllowed_OverrideForStore { get; set; }
@@ -31,6 +30,10 @@ namespace Nop.Web.Areas.Admin.Models.Settings
         [NopResourceDisplayName("Admin.Configuration.Settings.Order.AnonymousCheckoutAllowed")]
         public bool AnonymousCheckoutAllowed { get; set; }
         public bool AnonymousCheckoutAllowed_OverrideForStore { get; set; }
+
+        [NopResourceDisplayName("Admin.Configuration.Settings.Order.CheckoutDisabled")]
+        public bool CheckoutDisabled { get; set; }
+        public bool CheckoutDisabled_OverrideForStore { get; set; }
 
         [NopResourceDisplayName("Admin.Configuration.Settings.Order.TermsOfServiceOnShoppingCartPage")]
         public bool TermsOfServiceOnShoppingCartPage { get; set; }

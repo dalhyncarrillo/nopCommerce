@@ -7,11 +7,12 @@ using Nop.Services.Catalog;
 using Nop.Services.Security;
 using Nop.Services.Stores;
 using Nop.Web.Factories;
+using Nop.Web.Framework.Components;
 using Nop.Web.Infrastructure.Cache;
 
 namespace Nop.Web.Components
 {
-    public class RelatedProductsViewComponent : ViewComponent
+    public class RelatedProductsViewComponent : NopViewComponent
     {
         private readonly IProductModelFactory _productModelFactory;
         private readonly IProductService _productService;
@@ -47,6 +48,8 @@ namespace Nop.Web.Components
             products = products.Where(p => _aclService.Authorize(p) && _storeMappingService.Authorize(p)).ToList();
             //availability dates
             products = products.Where(p => p.IsAvailable()).ToList();
+            //visible individually
+            products = products.Where(p => p.VisibleIndividually).ToList();
 
             if (!products.Any())
                 return Content("");

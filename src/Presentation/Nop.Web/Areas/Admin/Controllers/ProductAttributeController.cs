@@ -28,7 +28,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         #endregion Fields
 
-        #region Constructors
+        #region Ctor
 
         public ProductAttributeController(IProductService productService,
             IProductAttributeService productAttributeService,
@@ -56,14 +56,14 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var localized in model.Locales)
             {
                 _localizedEntityService.SaveLocalizedValue(productAttribute,
-                                                               x => x.Name,
-                                                               localized.Name,
-                                                               localized.LanguageId);
+                    x => x.Name,
+                    localized.Name,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(productAttribute,
-                                                           x => x.Description,
-                                                           localized.Description,
-                                                           localized.LanguageId);
+                    x => x.Description,
+                    localized.Description,
+                    localized.LanguageId);
             }
         }
 
@@ -72,9 +72,9 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var localized in model.Locales)
             {
                 _localizedEntityService.SaveLocalizedValue(ppav,
-                                                               x => x.Name,
-                                                               localized.Name,
-                                                               localized.LanguageId);
+                    x => x.Name,
+                    localized.Name,
+                    localized.LanguageId);
             }
         }
 
@@ -140,7 +140,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 UpdateLocales(productAttribute, model);
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewProductAttribute", _localizationService.GetResource("ActivityLog.AddNewProductAttribute"), productAttribute.Name);
+                _customerActivityService.InsertActivity("AddNewProductAttribute",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewProductAttribute"), productAttribute.Name), productAttribute);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Attributes.ProductAttributes.Added"));
 
@@ -200,7 +201,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 UpdateLocales(productAttribute, model);
 
                 //activity log
-                _customerActivityService.InsertActivity("EditProductAttribute", _localizationService.GetResource("ActivityLog.EditProductAttribute"), productAttribute.Name);
+                _customerActivityService.InsertActivity("EditProductAttribute",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditProductAttribute"), productAttribute.Name), productAttribute);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Attributes.ProductAttributes.Updated"));
                 if (continueEditing)
@@ -232,7 +234,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _productAttributeService.DeleteProductAttribute(productAttribute);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteProductAttribute", _localizationService.GetResource("ActivityLog.DeleteProductAttribute"), productAttribute.Name);
+            _customerActivityService.InsertActivity("DeleteProductAttribute",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteProductAttribute"), productAttribute.Name), productAttribute);
 
             SuccessNotification(_localizationService.GetResource("Admin.Catalog.Attributes.ProductAttributes.Deleted"));
             return RedirectToAction("List");
@@ -291,7 +294,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                         ProductAttributeId = x.ProductAttributeId,
                         Name = x.Name,
                         PriceAdjustment = x.PriceAdjustment,
-                        PriceAdjustmentStr = x.PriceAdjustment.ToString("G29"),
+                        PriceAdjustmentUsePercentage = x.PriceAdjustmentUsePercentage,
+                        PriceAdjustmentStr = x.PriceAdjustment.ToString("G29") + (x.PriceAdjustmentUsePercentage ? " %" : ""),
                         WeightAdjustment = x.WeightAdjustment,
                         WeightAdjustmentStr = x.WeightAdjustment.ToString("G29"),
                         Cost = x.Cost,
@@ -315,8 +319,10 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (productAttribute == null)
                 throw new ArgumentException("No product attribute found with the specified id");
 
-            var model = new PredefinedProductAttributeValueModel();
-            model.ProductAttributeId = productAttributeId;
+            var model = new PredefinedProductAttributeValueModel
+            {
+                ProductAttributeId = productAttributeId
+            };
 
             //locales
             AddLocales(_languageService, model.Locales);
@@ -341,6 +347,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     ProductAttributeId = model.ProductAttributeId,
                     Name = model.Name,
                     PriceAdjustment = model.PriceAdjustment,
+                    PriceAdjustmentUsePercentage = model.PriceAdjustmentUsePercentage,
                     WeightAdjustment = model.WeightAdjustment,
                     Cost = model.Cost,
                     IsPreSelected = model.IsPreSelected,
@@ -373,6 +380,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 ProductAttributeId = ppav.ProductAttributeId,
                 Name = ppav.Name,
                 PriceAdjustment = ppav.PriceAdjustment,
+                PriceAdjustmentUsePercentage = ppav.PriceAdjustmentUsePercentage,
                 WeightAdjustment = ppav.WeightAdjustment,
                 Cost = ppav.Cost,
                 IsPreSelected = ppav.IsPreSelected,
@@ -400,6 +408,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             {
                 ppav.Name = model.Name;
                 ppav.PriceAdjustment = model.PriceAdjustment;
+                ppav.PriceAdjustmentUsePercentage = model.PriceAdjustmentUsePercentage;
                 ppav.WeightAdjustment = model.WeightAdjustment;
                 ppav.Cost = model.Cost;
                 ppav.IsPreSelected = model.IsPreSelected;

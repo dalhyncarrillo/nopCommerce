@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using FluentValidation.Attributes;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Nop.Core.Infrastructure;
 using Nop.Web.Framework.Mvc.ModelBinding;
 using Nop.Web.Framework.Mvc.Models;
 using Nop.Web.Validators.Customer;
@@ -22,10 +20,7 @@ namespace Nop.Web.Models.Customer
             this.AssociatedExternalAuthRecords = new List<AssociatedExternalAuthModel>();
             this.CustomerAttributes = new List<CustomerAttributeModel>();
         }
-
-        //MVC is suppressing further validation if the IFormCollection is passed to a controller method. That's why we add to the model
-        public IFormCollection Form { get; set; }
-
+        
         [DataType(DataType.EmailAddress)]
         [NopResourceDisplayName("Account.Fields.Email")]
         public string Email { get; set; }
@@ -48,7 +43,6 @@ namespace Nop.Web.Models.Customer
         public string FirstName { get; set; }
         [NopResourceDisplayName("Account.Fields.LastName")]
         public string LastName { get; set; }
-
 
         public bool DateOfBirthEnabled { get; set; }
         [NopResourceDisplayName("Account.Fields.DateOfBirth")]
@@ -96,6 +90,11 @@ namespace Nop.Web.Models.Customer
         public bool CityRequired { get; set; }
         [NopResourceDisplayName("Account.Fields.City")]
         public string City { get; set; }
+
+        public bool CountyEnabled { get; set; }
+        public bool CountyRequired { get; set; }
+        [NopResourceDisplayName("Account.Fields.County")]
+        public string County { get; set; }
 
         public bool CountryEnabled { get; set; }
         public bool CountryRequired { get; set; }

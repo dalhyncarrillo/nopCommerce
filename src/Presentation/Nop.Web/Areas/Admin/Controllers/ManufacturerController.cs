@@ -60,7 +60,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         #endregion
 
-        #region Constructors
+        #region Ctor
 
         public ManufacturerController(ICategoryService categoryService, 
             IManufacturerService manufacturerService,
@@ -118,29 +118,29 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var localized in model.Locales)
             {
                 _localizedEntityService.SaveLocalizedValue(manufacturer,
-                                                               x => x.Name,
-                                                               localized.Name,
-                                                               localized.LanguageId);
+                    x => x.Name,
+                    localized.Name,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(manufacturer,
-                                                           x => x.Description,
-                                                           localized.Description,
-                                                           localized.LanguageId);
+                    x => x.Description,
+                    localized.Description,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(manufacturer,
-                                                           x => x.MetaKeywords,
-                                                           localized.MetaKeywords,
-                                                           localized.LanguageId);
+                    x => x.MetaKeywords,
+                    localized.MetaKeywords,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(manufacturer,
-                                                           x => x.MetaDescription,
-                                                           localized.MetaDescription,
-                                                           localized.LanguageId);
+                    x => x.MetaDescription,
+                    localized.MetaDescription,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(manufacturer,
-                                                           x => x.MetaTitle,
-                                                           localized.MetaTitle,
-                                                           localized.LanguageId);
+                    x => x.MetaTitle,
+                    localized.MetaTitle,
+                    localized.LanguageId);
 
                 //search engine name
                 var seName = manufacturer.ValidateSeName(localized.SeName, localized.Name, false);
@@ -379,7 +379,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 SaveStoreMappings(manufacturer, model);
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewManufacturer", _localizationService.GetResource("ActivityLog.AddNewManufacturer"), manufacturer.Name);
+                _customerActivityService.InsertActivity("AddNewManufacturer",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewManufacturer"), manufacturer.Name), manufacturer);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Manufacturers.Added"));
 
@@ -452,7 +453,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             if (ModelState.IsValid)
             {
-                int prevPictureId = manufacturer.PictureId;
+                var prevPictureId = manufacturer.PictureId;
                 manufacturer = model.ToEntity(manufacturer);
                 manufacturer.UpdatedOnUtc = DateTime.UtcNow;
                 _manufacturerService.UpdateManufacturer(manufacturer);
@@ -494,7 +495,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 SaveStoreMappings(manufacturer, model);
 
                 //activity log
-                _customerActivityService.InsertActivity("EditManufacturer", _localizationService.GetResource("ActivityLog.EditManufacturer"), manufacturer.Name);
+                _customerActivityService.InsertActivity("EditManufacturer",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditManufacturer"), manufacturer.Name), manufacturer);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Manufacturers.Updated"));
 
@@ -507,7 +509,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 }
                 return RedirectToAction("List");
             }
-
 
             //If we got this far, something failed, redisplay form
             //templates
@@ -536,7 +537,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _manufacturerService.DeleteManufacturer(manufacturer);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteManufacturer", _localizationService.GetResource("ActivityLog.DeleteManufacturer"), manufacturer.Name);
+            _customerActivityService.InsertActivity("DeleteManufacturer",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteManufacturer"), manufacturer.Name), manufacturer);
 
             SuccessNotification(_localizationService.GetResource("Admin.Catalog.Manufacturers.Deleted"));
             return RedirectToAction("List");
@@ -640,7 +642,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 }),
                 Total = productManufacturers.TotalCount
             };
-
 
             return Json(gridModel);
         }
@@ -747,7 +748,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             if (model.SelectedProductIds != null)
             {
-                foreach (int id in model.SelectedProductIds)
+                foreach (var id in model.SelectedProductIds)
                 {
                     var product = _productService.GetProductById(id);
                     if (product != null)

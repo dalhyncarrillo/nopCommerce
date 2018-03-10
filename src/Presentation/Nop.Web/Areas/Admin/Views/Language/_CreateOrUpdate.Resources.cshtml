@@ -1,7 +1,8 @@
-﻿@model LanguageModel
+@model LanguageModel
 @inject AdminAreaSettings adminAreaSettings
 
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.LanguageDetailsResourcesTop, additionalData = Model })
     <div class="panel panel-default panel-search">
         <div class="panel-body">
             <div class="row">
@@ -158,7 +159,7 @@
                     });
                 </script>
 
-                <script type="text/javascript">
+                <script>
                     $(document).ready(function() {
                         $('#search-resources').click(function() {
                             var grid = $('#resources-grid').data('kendoGrid');
@@ -187,4 +188,5 @@
             </div>
         </div>
     }
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.LanguageDetailsResourcesBottom, additionalData = Model })
 </div>

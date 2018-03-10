@@ -8,10 +8,11 @@ using Nop.Services.Orders;
 using Nop.Services.Security;
 using Nop.Services.Stores;
 using Nop.Web.Factories;
+using Nop.Web.Framework.Components;
 
 namespace Nop.Web.Components
 {
-    public class CrossSellProductsViewComponent : ViewComponent
+    public class CrossSellProductsViewComponent : NopViewComponent
     {
         private readonly IAclService _aclService;
         private readonly IProductModelFactory _productModelFactory;
@@ -50,10 +51,11 @@ namespace Nop.Web.Components
             products = products.Where(p => _aclService.Authorize(p) && _storeMappingService.Authorize(p)).ToList();
             //availability dates
             products = products.Where(p => p.IsAvailable()).ToList();
+            //visible individually
+            products = products.Where(p => p.VisibleIndividually).ToList();
 
             if (!products.Any())
                 return Content("");
-
 
             //Cross-sell products are displayed on the shopping cart page.
             //We know that the entire shopping cart page is not refresh

@@ -1,6 +1,7 @@
-﻿@model ProductModel
+@model ProductModel
 
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsPicturesTop, additionalData = Model })
     @if (Model.Id > 0)
     {
         <div class="panel panel-default">
@@ -120,7 +121,7 @@
                 @T("Admin.Catalog.Products.Pictures.AddNew")
             </div>
             <div class="panel-body">
-                <script type="text/javascript">
+                <script>
                     $(document).ready(function() {
                         $('#addProductPicture').click(function() {
                             var pictureId = $("#@Html.IdFor(model => model.AddPictureModel.PictureId)").val();
@@ -149,10 +150,12 @@
                                 type: "POST",
                                 url: "@(Url.Action("ProductPictureAdd", "Product"))",
                                 data: postData,
-                                success: function(data) {
+                                success: function (data) {
+                                    $('#addProductPicture').attr('disabled', false);
+                                    if (!data.Result)
+                                        return;
                                     var grid = $("#productpictures-grid");
                                     grid.data('kendoGrid').dataSource.read();
-                                    $('#addProductPicture').attr('disabled', false);
                                 },
                                 error: function(xhr, ajaxOptions, thrownError) {
                                     alert('Failed to add product picture.');
@@ -214,4 +217,5 @@
             </div>
         </div>
     }
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsPicturesBottom, additionalData = Model })
 </div>

@@ -56,6 +56,9 @@ namespace Nop.Web.Areas.Admin.Models.Discounts
         [NopResourceDisplayName("Admin.Promotions.Discounts.Fields.RequiresCouponCode")]
         public bool RequiresCouponCode { get; set; }
 
+        [NopResourceDisplayName("Admin.Promotions.Discounts.Fields.DiscountUrl")]
+        public string DiscountUrl { get; set; }
+
         [NopResourceDisplayName("Admin.Promotions.Discounts.Fields.CouponCode")]
         public string CouponCode { get; set; }
 
@@ -130,6 +133,7 @@ namespace Nop.Web.Areas.Admin.Models.Discounts
 
             public string CategoryName { get; set; }
         }
+
         public partial class AddCategoryToDiscountModel : BaseNopModel
         {
             [NopResourceDisplayName("Admin.Catalog.Categories.List.SearchCategoryName")]
@@ -140,13 +144,13 @@ namespace Nop.Web.Areas.Admin.Models.Discounts
             public int[] SelectedCategoryIds { get; set; }
         }
 
-
         public partial class AppliedToManufacturerModel : BaseNopModel
         {
             public int ManufacturerId { get; set; }
 
             public string ManufacturerName { get; set; }
         }
+
         public partial class AddManufacturerToDiscountModel : BaseNopModel
         {
             [NopResourceDisplayName("Admin.Catalog.Manufacturers.List.SearchManufacturerName")]
@@ -157,13 +161,13 @@ namespace Nop.Web.Areas.Admin.Models.Discounts
             public int[] SelectedManufacturerIds { get; set; }
         }
 
-
         public partial class AppliedToProductModel : BaseNopModel
         {
             public int ProductId { get; set; }
 
             public string ProductName { get; set; }
         }
+
         public partial class AddProductToDiscountModel : BaseNopModel
         {
             public AddProductToDiscountModel()

@@ -102,7 +102,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         #endregion
 
-        #region Constructors
+        #region Ctor
 
         public ProductController(IProductService productService,
             IProductTemplateService productTemplateService,
@@ -204,29 +204,29 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var localized in model.Locales)
             {
                 _localizedEntityService.SaveLocalizedValue(product,
-                                                               x => x.Name,
-                                                               localized.Name,
-                                                               localized.LanguageId);
+                    x => x.Name,
+                    localized.Name,
+                    localized.LanguageId);
                 _localizedEntityService.SaveLocalizedValue(product,
-                                                               x => x.ShortDescription,
-                                                               localized.ShortDescription,
-                                                               localized.LanguageId);
+                    x => x.ShortDescription,
+                    localized.ShortDescription,
+                    localized.LanguageId);
                 _localizedEntityService.SaveLocalizedValue(product,
-                                                               x => x.FullDescription,
-                                                               localized.FullDescription,
-                                                               localized.LanguageId);
+                    x => x.FullDescription,
+                    localized.FullDescription,
+                    localized.LanguageId);
                 _localizedEntityService.SaveLocalizedValue(product,
-                                                               x => x.MetaKeywords,
-                                                               localized.MetaKeywords,
-                                                               localized.LanguageId);
+                    x => x.MetaKeywords,
+                    localized.MetaKeywords,
+                    localized.LanguageId);
                 _localizedEntityService.SaveLocalizedValue(product,
-                                                               x => x.MetaDescription,
-                                                               localized.MetaDescription,
-                                                               localized.LanguageId);
+                    x => x.MetaDescription,
+                    localized.MetaDescription,
+                    localized.LanguageId);
                 _localizedEntityService.SaveLocalizedValue(product,
-                                                               x => x.MetaTitle,
-                                                               localized.MetaTitle,
-                                                               localized.LanguageId);
+                    x => x.MetaTitle,
+                    localized.MetaTitle,
+                    localized.LanguageId);
 
                 //search engine name
                 var seName = product.ValidateSeName(localized.SeName, localized.Name, false);
@@ -239,9 +239,9 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var localized in model.Locales)
             {
                 _localizedEntityService.SaveLocalizedValue(productTag,
-                                                               x => x.Name,
-                                                               localized.Name,
-                                                               localized.LanguageId);
+                    x => x.Name,
+                    localized.Name,
+                    localized.LanguageId);
             }
         }
 
@@ -261,9 +261,9 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var localized in model.Locales)
             {
                 _localizedEntityService.SaveLocalizedValue(pav,
-                                                               x => x.Name,
-                                                               localized.Name,
-                                                               localized.LanguageId);
+                    x => x.Name,
+                    localized.Name,
+                    localized.LanguageId);
             }
         }
 
@@ -490,24 +490,54 @@ namespace Nop.Web.Areas.Admin.Controllers
             _productService.UpdateHasDiscountsApplied(product);
         }
 
-        protected virtual void PrepareAddProductAttributeCombinationModel(AddProductAttributeCombinationModel model, Product product)
+        protected virtual void PrepareProductAttributeCombinationModel(ProductAttributeCombinationModel model, 
+            Product product, ProductAttributeCombination combination = null)
         {
             if (model == null)
                 throw new ArgumentNullException(nameof(model));
+
             if (product == null)
                 throw new ArgumentNullException(nameof(product));
 
+            //pictures
+            model.ProductPictureModels = _productService.GetProductPicturesByProductId(product.Id).Select(picture => new ProductModel.ProductPictureModel
+            {
+                Id = picture.Id,
+                ProductId = picture.ProductId,
+                PictureId = picture.PictureId,
+                PictureUrl = _pictureService.GetPictureUrl(picture.PictureId),
+                DisplayOrder = picture.DisplayOrder
+            }).ToList();
+
+            if (combination != null)
+            {
+                //prepare model for editing an existing combination
+                model.AllowOutOfStockOrders = combination.AllowOutOfStockOrders;
+                model.AttributesXml = combination.AttributesXml;
+                model.Gtin = combination.Gtin;
+                model.Id = combination.Id;
+                model.ManufacturerPartNumber = combination.ManufacturerPartNumber;
+                model.NotifyAdminForQuantityBelow = combination.NotifyAdminForQuantityBelow;
+                model.OverriddenPrice = combination.OverriddenPrice;
+                model.PictureId = combination.PictureId;
+                model.ProductId = combination.ProductId;
+                model.Sku = combination.Sku;
+                model.StockQuantity = combination.StockQuantity;
+                return;
+            }
+
+            //some default values for creating a new combination
             model.ProductId = product.Id;
             model.StockQuantity = 10000;
             model.NotifyAdminForQuantityBelow = 1;
 
+            //get product attribute mappings (exclude non-combinable attributes)
             var attributes = _productAttributeService.GetProductAttributeMappingsByProductId(product.Id)
-                //ignore non-combinable attributes for combinations
-                .Where(x => !x.IsNonCombinable())
-                .ToList();
+                .Where(productAttributeMapping => !productAttributeMapping.IsNonCombinable()).ToList();
+
             foreach (var attribute in attributes)
             {
-                var attributeModel = new AddProductAttributeCombinationModel.ProductAttributeModel
+                var attributeModel = new ProductAttributeCombinationModel.ProductAttributeModel
                 {
                     Id = attribute.Id,
                     ProductAttributeId = attribute.ProductAttributeId,
@@ -523,7 +553,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     var attributeValues = _productAttributeService.GetProductAttributeValues(attribute.Id);
                     foreach (var attributeValue in attributeValues)
                     {
-                        var attributeValueModel = new AddProductAttributeCombinationModel.ProductAttributeValueModel
+                        var attributeValueModel = new ProductAttributeCombinationModel.ProductAttributeValueModel
                         {
                             Id = attributeValue.Id,
                             Name = attributeValue.Name,
@@ -537,14 +567,163 @@ namespace Nop.Web.Areas.Admin.Controllers
             }
         }
 
+        protected virtual string GetAttributesXmlForProductAttributeCombination(IFormCollection form, List<string> warnings, int productId)
+        {
+            var attributesXml = string.Empty;
+
+            //get product attribute mappings (exclude non-combinable attributes)
+            var attributes = _productAttributeService.GetProductAttributeMappingsByProductId(productId)
+                .Where(productAttributeMapping => !productAttributeMapping.IsNonCombinable()).ToList();
+
+            foreach (var attribute in attributes)
+            {
+                var controlId = $"product_attribute_{attribute.Id}";
+                switch (attribute.AttributeControlType)
+                {
+                    case AttributeControlType.DropdownList:
+                    case AttributeControlType.RadioList:
+                    case AttributeControlType.ColorSquares:
+                    case AttributeControlType.ImageSquares:
+                        {
+                            var ctrlAttributes = form[controlId];
+                            if (!string.IsNullOrEmpty(ctrlAttributes))
+                            {
+                                var selectedAttributeId = int.Parse(ctrlAttributes);
+                                if (selectedAttributeId > 0)
+                                    attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
+                                        attribute, selectedAttributeId.ToString());
+                            }
+                        }
+                        break;
+                    case AttributeControlType.Checkboxes:
+                        {
+                            var cblAttributes = form[controlId].ToString();
+                            if (!string.IsNullOrEmpty(cblAttributes))
+                            {
+                                foreach (var item in cblAttributes.Split(new[] { ',' },
+                                    StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    var selectedAttributeId = int.Parse(item);
+                                    if (selectedAttributeId > 0)
+                                        attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
+                                            attribute, selectedAttributeId.ToString());
+                                }
+                            }
+                        }
+                        break;
+                    case AttributeControlType.ReadonlyCheckboxes:
+                        {
+                            //load read-only (already server-side selected) values
+                            var attributeValues = _productAttributeService.GetProductAttributeValues(attribute.Id);
+                            foreach (var selectedAttributeId in attributeValues
+                                .Where(v => v.IsPreSelected)
+                                .Select(v => v.Id)
+                                .ToList())
+                            {
+                                attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
+                                    attribute, selectedAttributeId.ToString());
+                            }
+                        }
+                        break;
+                    case AttributeControlType.TextBox:
+                    case AttributeControlType.MultilineTextbox:
+                        {
+                            var ctrlAttributes = form[controlId].ToString();
+                            if (!string.IsNullOrEmpty(ctrlAttributes))
+                            {
+                                var enteredText = ctrlAttributes.Trim();
+                                attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
+                                    attribute, enteredText);
+                            }
+                        }
+                        break;
+                    case AttributeControlType.Datepicker:
+                        {
+                            var date = form[controlId + "_day"];
+                            var month = form[controlId + "_month"];
+                            var year = form[controlId + "_year"];
+                            DateTime? selectedDate = null;
+                            try
+                            {
+                                selectedDate = new DateTime(Int32.Parse(year), Int32.Parse(month), Int32.Parse(date));
+                            }
+                            catch
+                            {
+                            }
+                            if (selectedDate.HasValue)
+                            {
+                                attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
+                                    attribute, selectedDate.Value.ToString("D"));
+                            }
+                        }
+                        break;
+                    case AttributeControlType.FileUpload:
+                        {
+                            var httpPostedFile = this.Request.Form.Files[controlId];
+                            if ((httpPostedFile != null) && (!string.IsNullOrEmpty(httpPostedFile.FileName)))
+                            {
+                                var fileSizeOk = true;
+                                if (attribute.ValidationFileMaximumSize.HasValue)
+                                {
+                                    //compare in bytes
+                                    var maxFileSizeBytes = attribute.ValidationFileMaximumSize.Value * 1024;
+                                    if (httpPostedFile.Length > maxFileSizeBytes)
+                                    {
+                                        warnings.Add(string.Format(
+                                            _localizationService.GetResource("ShoppingCart.MaximumUploadedFileSize"),
+                                            attribute.ValidationFileMaximumSize.Value));
+                                        fileSizeOk = false;
+                                    }
+                                }
+                                if (fileSizeOk)
+                                {
+                                    //save an uploaded file
+                                    var download = new Download
+                                    {
+                                        DownloadGuid = Guid.NewGuid(),
+                                        UseDownloadUrl = false,
+                                        DownloadUrl = "",
+                                        DownloadBinary = httpPostedFile.GetDownloadBits(),
+                                        ContentType = httpPostedFile.ContentType,
+                                        Filename = Path.GetFileNameWithoutExtension(httpPostedFile.FileName),
+                                        Extension = Path.GetExtension(httpPostedFile.FileName),
+                                        IsNew = true
+                                    };
+                                    _downloadService.InsertDownload(download);
+
+                                    //save attribute
+                                    attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
+                                        attribute, download.DownloadGuid.ToString());
+                                }
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            //validate conditional attributes (if specified)
+            foreach (var attribute in attributes)
+            {
+                var conditionMet = _productAttributeParser.IsConditionMet(attribute, attributesXml);
+                if (conditionMet.HasValue && !conditionMet.Value)
+                {
+                    attributesXml = _productAttributeParser.RemoveProductAttribute(attributesXml, attribute);
+                }
+            }
+
+            return attributesXml;
+        }
+
         protected virtual string[] ParseProductTags(string productTags)
         {
             var result = new List<string>();
-            if (!String.IsNullOrWhiteSpace(productTags))
+            if (!string.IsNullOrWhiteSpace(productTags))
             {
-                string[] values = productTags.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (string val1 in values)
-                    if (!String.IsNullOrEmpty(val1.Trim()))
+                var values = productTags.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var val1 in values)
+                    if (!string.IsNullOrEmpty(val1.Trim()))
                         result.Add(val1.Trim());
             }
             return result.ToArray();
@@ -636,7 +815,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 model.ProductsTypesSupportedByProductTemplates.Add(productTypeId, new List<SelectListItem>());
                 foreach (var template in templates)
                 {
-                    if (String.IsNullOrEmpty(template.IgnoredProductTypes) ||
+                    if (string.IsNullOrEmpty(template.IgnoredProductTypes) ||
                         !((IList<int>)TypeDescriptor.GetConverter(typeof(List<int>)).ConvertFrom(template.IgnoredProductTypes)).Contains(productTypeId))
                     {
                         model.ProductsTypesSupportedByProductTemplates[productTypeId].Add(new SelectListItem
@@ -732,7 +911,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (product != null)
             {
                 var result = new StringBuilder();
-                for (int i = 0; i < product.ProductTags.Count; i++)
+                for (var i = 0; i < product.ProductTags.Count; i++)
                 {
                     var pt = product.ProductTags.ToList()[i];
                     result.Append(pt.Name);
@@ -786,18 +965,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             model.ProductEditorSettingsModel = productEditorSettings.ToModel();
         }
 
-        protected virtual List<int> GetChildCategoryIds(int parentCategoryId)
-        {
-            var categoriesIds = new List<int>();
-            var categories = _categoryService.GetAllCategoriesByParentCategoryId(parentCategoryId, true);
-            foreach (var category in categories)
-            {
-                categoriesIds.Add(category.Id);
-                categoriesIds.AddRange(GetChildCategoryIds(category.Id));
-            }
-            return categoriesIds;
-        }
-
         protected virtual void SaveProductWarehouseInventory(Product product, ProductModel model)
         {
             if (product == null)
@@ -816,7 +983,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var warehouse in warehouses)
             {
                 //parse stock quantity
-                int stockQuantity = 0;
+                var stockQuantity = 0;
                 foreach (var formKey in formData.Keys)
                 {
                     if (formKey.Equals($"warehouse_qty_{warehouse.Id}", StringComparison.InvariantCultureIgnoreCase))
@@ -827,8 +994,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 }
 
                 //parse reserved quantity
-                int reservedQuantity = 0;
-                foreach (string formKey in formData.Keys)
+                var reservedQuantity = 0;
+                foreach (var formKey in formData.Keys)
                     if (formKey.Equals($"warehouse_reserved_{warehouse.Id}", StringComparison.InvariantCultureIgnoreCase))
                     {
                         int.TryParse(formData[formKey], out reservedQuantity);
@@ -836,8 +1003,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                     }
 
                 //parse "used" field
-                bool used = false;
-                foreach (string formKey in formData.Keys)
+                var used = false;
+                foreach (var formKey in formData.Keys)
                     if (formKey.Equals($"warehouse_used_{warehouse.Id}", StringComparison.InvariantCultureIgnoreCase))
                     {
                         int.TryParse(formData[formKey], out int tmp);
@@ -915,60 +1082,61 @@ namespace Nop.Web.Areas.Admin.Controllers
                     Value = productAttribute.Id.ToString()
                 });
             }
-            if (pam != null)
-            {
-                model.Id = pam.Id;
-                model.ProductAttribute = _productAttributeService.GetProductAttributeById(pam.ProductAttributeId).Name;
-                model.AttributeControlType = pam.AttributeControlType.GetLocalizedEnum(_localizationService, _workContext);
-                if (!excludeProperties)
-                {
-                    model.ProductAttributeId = pam.ProductAttributeId;
-                    model.TextPrompt = pam.TextPrompt;
-                    model.IsRequired = pam.IsRequired;
-                    model.AttributeControlTypeId = pam.AttributeControlTypeId;
-                    model.DisplayOrder = pam.DisplayOrder;
-                    model.ValidationMinLength = pam.ValidationMinLength;
-                    model.ValidationMaxLength = pam.ValidationMaxLength;
-                    model.ValidationFileAllowedExtensions = pam.ValidationFileAllowedExtensions;
-                    model.ValidationFileMaximumSize = pam.ValidationFileMaximumSize;
-                    model.DefaultValue = pam.DefaultValue;
-                }
-                
-                if (pam.ValidationRulesAllowed())
-                {
-                    var validationRules = new StringBuilder(string.Empty);
-                    if (pam.ValidationMinLength != null)
-                        validationRules.AppendFormat("{0}: {1}<br />",
-                            _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.MinLength"),
-                            pam.ValidationMinLength);
-                    if (pam.ValidationMaxLength != null)
-                        validationRules.AppendFormat("{0}: {1}<br />",
-                            _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.MaxLength"),
-                            pam.ValidationMaxLength);
-                    if (!string.IsNullOrEmpty(pam.ValidationFileAllowedExtensions))
-                        validationRules.AppendFormat("{0}: {1}<br />",
-                            _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.FileAllowedExtensions"),
-                            WebUtility.HtmlEncode(pam.ValidationFileAllowedExtensions));
-                    if (pam.ValidationFileMaximumSize != null)
-                        validationRules.AppendFormat("{0}: {1}<br />",
-                            _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.FileMaximumSize"),
-                            pam.ValidationFileMaximumSize);
-                    if (!string.IsNullOrEmpty(pam.DefaultValue))
-                        validationRules.AppendFormat("{0}: {1}<br />",
-                            _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.DefaultValue"),
-                            WebUtility.HtmlEncode(pam.DefaultValue));
-                    model.ValidationRulesString = validationRules.ToString();
-                }
 
-                //currently any attribute can have condition. why not?
-                model.ConditionAllowed = true;
-                var conditionAttribute = _productAttributeParser.ParseProductAttributeMappings(pam.ConditionAttributeXml).FirstOrDefault();
-                var conditionValue = _productAttributeParser.ParseProductAttributeValues(pam.ConditionAttributeXml).FirstOrDefault();
-                if (conditionAttribute != null && conditionValue != null)
-                    model.ConditionString = $"{WebUtility.HtmlEncode(conditionAttribute.ProductAttribute.Name)}: {WebUtility.HtmlEncode(conditionValue.Name)}";
-                else
-                    model.ConditionString = string.Empty;
+            if (pam == null)
+                return;
+
+            model.Id = pam.Id;
+            model.ProductAttribute = _productAttributeService.GetProductAttributeById(pam.ProductAttributeId).Name;
+            model.AttributeControlType = pam.AttributeControlType.GetLocalizedEnum(_localizationService, _workContext);
+            if (!excludeProperties)
+            {
+                model.ProductAttributeId = pam.ProductAttributeId;
+                model.TextPrompt = pam.TextPrompt;
+                model.IsRequired = pam.IsRequired;
+                model.AttributeControlTypeId = pam.AttributeControlTypeId;
+                model.DisplayOrder = pam.DisplayOrder;
+                model.ValidationMinLength = pam.ValidationMinLength;
+                model.ValidationMaxLength = pam.ValidationMaxLength;
+                model.ValidationFileAllowedExtensions = pam.ValidationFileAllowedExtensions;
+                model.ValidationFileMaximumSize = pam.ValidationFileMaximumSize;
+                model.DefaultValue = pam.DefaultValue;
             }
+                
+            if (pam.ValidationRulesAllowed())
+            {
+                var validationRules = new StringBuilder(string.Empty);
+                if (pam.ValidationMinLength != null)
+                    validationRules.AppendFormat("{0}: {1}<br />",
+                        _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.MinLength"),
+                        pam.ValidationMinLength);
+                if (pam.ValidationMaxLength != null)
+                    validationRules.AppendFormat("{0}: {1}<br />",
+                        _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.MaxLength"),
+                        pam.ValidationMaxLength);
+                if (!string.IsNullOrEmpty(pam.ValidationFileAllowedExtensions))
+                    validationRules.AppendFormat("{0}: {1}<br />",
+                        _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.FileAllowedExtensions"),
+                        WebUtility.HtmlEncode(pam.ValidationFileAllowedExtensions));
+                if (pam.ValidationFileMaximumSize != null)
+                    validationRules.AppendFormat("{0}: {1}<br />",
+                        _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.FileMaximumSize"),
+                        pam.ValidationFileMaximumSize);
+                if (!string.IsNullOrEmpty(pam.DefaultValue))
+                    validationRules.AppendFormat("{0}: {1}<br />",
+                        _localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.Attributes.ValidationRules.DefaultValue"),
+                        WebUtility.HtmlEncode(pam.DefaultValue));
+                model.ValidationRulesString = validationRules.ToString();
+            }
+
+            //currently any attribute can have condition. why not?
+            model.ConditionAllowed = true;
+            var conditionAttribute = _productAttributeParser.ParseProductAttributeMappings(pam.ConditionAttributeXml).FirstOrDefault();
+            var conditionValue = _productAttributeParser.ParseProductAttributeValues(pam.ConditionAttributeXml).FirstOrDefault();
+            if (conditionAttribute != null && conditionValue != null)
+                model.ConditionString = $"{WebUtility.HtmlEncode(conditionAttribute.ProductAttribute.Name)}: {WebUtility.HtmlEncode(conditionValue.Name)}";
+            else
+                model.ConditionString = string.Empty;
         }
 
         protected virtual void PrepareConditionAttributes(ProductModel.ProductAttributeMappingModel model,
@@ -989,7 +1157,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             model.ConditionModel = new ProductAttributeConditionModel
             {
                 ProductAttributeMappingId = productAttributeMapping.Id,
-                EnableCondition = !String.IsNullOrEmpty(productAttributeMapping.ConditionAttributeXml)
+                EnableCondition = !string.IsNullOrEmpty(productAttributeMapping.ConditionAttributeXml)
             };
 
             //pre-select attribute and values
@@ -1045,7 +1213,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                             case AttributeControlType.ColorSquares:
                             case AttributeControlType.ImageSquares:
                             {
-                                if (!String.IsNullOrEmpty(productAttributeMapping.ConditionAttributeXml))
+                                if (!string.IsNullOrEmpty(productAttributeMapping.ConditionAttributeXml))
                                 {
                                     //clear default selection
                                     foreach (var item in attributeModel.Values)
@@ -1085,7 +1253,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 var attribute = _productAttributeService.GetProductAttributeMappingById(model.SelectedProductAttributeId);
                 if (attribute != null)
                 {
-                    string controlId = $"product_attribute_{attribute.Id}";
+                    var controlId = $"product_attribute_{attribute.Id}";
                     switch (attribute.AttributeControlType)
                     {
                         case AttributeControlType.DropdownList:
@@ -1096,7 +1264,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                             var ctrlAttributes = form[controlId];
                             if (!StringValues.IsNullOrEmpty(ctrlAttributes))
                             {
-                                int selectedAttributeId = int.Parse(ctrlAttributes);
+                                var selectedAttributeId = int.Parse(ctrlAttributes);
                                 if (selectedAttributeId > 0)
                                 {
                                     attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
@@ -1126,10 +1294,10 @@ namespace Nop.Web.Areas.Admin.Controllers
                             var cblAttributes = form[controlId];
                             if (!StringValues.IsNullOrEmpty(cblAttributes))
                             {
-                                bool anyValueSelected = false;
+                                var anyValueSelected = false;
                                 foreach (var item in cblAttributes.ToString().Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
                                 {
-                                    int selectedAttributeId = int.Parse(item);
+                                    var selectedAttributeId = int.Parse(item);
                                     if (selectedAttributeId > 0)
                                     {
                                         attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
@@ -1171,6 +1339,42 @@ namespace Nop.Web.Areas.Admin.Controllers
             _productAttributeService.UpdateProductAttributeMapping(productAttributeMapping);
         }
 
+        protected virtual void GenerateAttributeCombinations(Product product, IList<int> allowedAttributeIds = null)
+        {
+            var allAttributesXml = _productAttributeParser.GenerateAllCombinations(product, true, allowedAttributeIds);
+            foreach (var attributesXml in allAttributesXml)
+            {
+                var existingCombination = _productAttributeParser.FindProductAttributeCombination(product, attributesXml);
+
+                //already exists?
+                if (existingCombination != null)
+                    continue;
+
+                //new one
+                var warnings = new List<string>();
+                warnings.AddRange(_shoppingCartService.GetShoppingCartItemAttributeWarnings(_workContext.CurrentCustomer,
+                    ShoppingCartType.ShoppingCart, product, 1, attributesXml, true));
+                if (warnings.Count != 0)
+                    continue;
+
+                //save combination
+                var combination = new ProductAttributeCombination
+                {
+                    ProductId = product.Id,
+                    AttributesXml = attributesXml,
+                    StockQuantity = 0,
+                    AllowOutOfStockOrders = false,
+                    Sku = null,
+                    ManufacturerPartNumber = null,
+                    Gtin = null,
+                    OverriddenPrice = null,
+                    NotifyAdminForQuantityBelow = 1,
+                    PictureId = 0
+                };
+                _productAttributeService.InsertProductAttributeCombination(combination);
+            }
+        }
+
         #endregion
 
         #region Methods
@@ -1188,10 +1392,12 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductListModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
-            model.AllowVendorsToImportProducts = _vendorSettings.AllowVendorsToImportProducts;
+            var model = new ProductListModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null,
+                AllowVendorsToImportProducts = _vendorSettings.AllowVendorsToImportProducts
+            };
 
             //categories
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -1251,7 +1457,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             var categoryIds = new List<int> { model.SearchCategoryId };
             //include subcategories
             if (model.SearchIncludeSubCategories && model.SearchCategoryId > 0)
-                categoryIds.AddRange(GetChildCategoryIds(model.SearchCategoryId));
+                categoryIds.AddRange(_categoryService.GetChildCategoryIds(parentCategoryId: model.SearchCategoryId, showHidden: true));
 
             //0 - all (according to "ShowHidden" parameter)
             //1 - published only
@@ -1275,25 +1481,27 @@ namespace Nop.Web.Areas.Admin.Controllers
                 showHidden: true,
                 overridePublished: overridePublished
             );
-            var gridModel = new DataSourceResult();
-            gridModel.Data = products.Select(x =>
+            var gridModel = new DataSourceResult
             {
-                var productModel = x.ToModel();
+                Data = products.Select(x =>
+                {
+                    var productModel = x.ToModel();
                 //little performance optimization: ensure that "FullDescription" is not returned
                 productModel.FullDescription = "";
 
                 //picture
                 var defaultProductPicture = _pictureService.GetPicturesByProductId(x.Id, 1).FirstOrDefault();
-                productModel.PictureThumbnailUrl = _pictureService.GetPictureUrl(defaultProductPicture, 75, true);
+                    productModel.PictureThumbnailUrl = _pictureService.GetPictureUrl(defaultProductPicture, 75, true);
                 //product type
                 productModel.ProductTypeName = x.ProductType.GetLocalizedEnum(_localizationService, _workContext);
                 //friendly stock qantity
                 //if a simple product AND "manage inventory" is "Track inventory", then display
                 if (x.ProductType == ProductType.SimpleProduct && x.ManageInventoryMethod == ManageInventoryMethod.ManageStock)
-                    productModel.StockQuantityStr = x.GetTotalStockQuantity().ToString();
-                return productModel;
-            });
-            gridModel.Total = products.TotalCount;
+                        productModel.StockQuantityStr = x.GetTotalStockQuantity().ToString();
+                    return productModel;
+                }),
+                Total = products.TotalCount
+            };
 
             return Json(gridModel);
         }
@@ -1302,7 +1510,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         [FormValueRequired("go-to-product-by-sku")]
         public virtual IActionResult GoToSku(ProductListModel model)
         {
-            string sku = model.GoDirectlyToSku;
+            var sku = model.GoDirectlyToSku;
 
             //try to load a product entity
             var product = _productService.GetProductBySku(sku);
@@ -1366,7 +1574,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 ErrorNotification(string.Format(_localizationService.GetResource("Admin.Catalog.Products.ExceededMaximumNumber"), _vendorSettings.MaximumProductNumber));
                 return RedirectToAction("List");
             }
-
+            
             if (ModelState.IsValid)
             {
                 //a vendor should have access only to his products
@@ -1411,7 +1619,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                     _localizationService.GetResource("Admin.StockQuantityHistory.Messages.Edit"));
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewProduct", _localizationService.GetResource("ActivityLog.AddNewProduct"), product.Name);
+                _customerActivityService.InsertActivity("AddNewProduct",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewProduct"), product.Name), product);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Added"));
 
@@ -1606,7 +1815,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 }
 
                 //activity log
-                _customerActivityService.InsertActivity("EditProduct", _localizationService.GetResource("ActivityLog.EditProduct"), product.Name);
+                _customerActivityService.InsertActivity("EditProduct",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditProduct"), product.Name), product);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Updated"));
 
@@ -1650,7 +1860,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _productService.DeleteProduct(product);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteProduct", _localizationService.GetResource("ActivityLog.DeleteProduct"), product.Name);
+            _customerActivityService.InsertActivity("DeleteProduct",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteProduct"), product.Name), product);
 
             SuccessNotification(_localizationService.GetResource("Admin.Catalog.Products.Deleted"));
             return RedirectToAction("List");
@@ -1697,6 +1908,34 @@ namespace Nop.Web.Areas.Admin.Controllers
             }
         }
 
+        //action displaying notification (warning) to a store owner that entered SKU already exists
+        public virtual IActionResult SkuReservedWarning(int productId, string sku)
+        {
+            //check whether product with passed SKU already exists
+            var productBySku = _productService.GetProductBySku(sku);
+            if (productBySku != null)
+            {
+                if (productBySku.Id != productId)
+                {
+                    var message = string.Format(_localizationService.GetResource("Admin.Catalog.Products.Fields.Sku.Reserved"), productBySku.Name);
+                    return Json(new { Result = message });
+                }
+            }
+            else
+            {
+                //check whether combination with passed SKU already exists
+                var combinationBySku = _productAttributeService.GetProductAttributeCombinationBySku(sku);
+                if (combinationBySku != null)
+                {
+                    var message = string.Format(_localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.Fields.Sku.Reserved"), 
+                        combinationBySku.Product.Name);
+                    return Json(new { Result = message });
+                }
+            }
+
+            return Json(new { Result = string.Empty });
+        }
+
         #endregion
 
         #region Required products
@@ -1709,7 +1948,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return Json(new { Text = result });
 
-            if (!String.IsNullOrWhiteSpace(productIds))
+            if (!string.IsNullOrWhiteSpace(productIds))
             {
                 var ids = new List<int>();
                 var rangeArray = productIds
@@ -1717,14 +1956,14 @@ namespace Nop.Web.Areas.Admin.Controllers
                     .Select(x => x.Trim())
                     .ToList();
 
-                foreach (string str1 in rangeArray)
+                foreach (var str1 in rangeArray)
                 {
                     if (int.TryParse(str1, out int tmp1))
                         ids.Add(tmp1);
                 }
 
                 var products = _productService.GetProductsByIds(ids.ToArray());
-                for (int i = 0; i <= products.Count - 1; i++)
+                for (var i = 0; i <= products.Count - 1; i++)
                 {
                     result += products[i].Name;
                     if (i != products.Count - 1)
@@ -1740,9 +1979,11 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductModel.AddRequiredProductModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
+            var model = new ProductModel.AddRequiredProductModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null
+            };
 
             //categories
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -1797,9 +2038,11 @@ namespace Nop.Web.Areas.Admin.Controllers
                 pageSize: command.PageSize,
                 showHidden: true
                 );
-            var gridModel = new DataSourceResult();
-            gridModel.Data = products.Select(x => x.ToModel());
-            gridModel.Total = products.TotalCount;
+            var gridModel = new DataSourceResult
+            {
+                Data = products.Select(x => x.ToModel()),
+                Total = products.TotalCount
+            };
 
             return Json(gridModel);
         }
@@ -1903,9 +2146,11 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductModel.AddRelatedProductModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
+            var model = new ProductModel.AddRelatedProductModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null
+            };
 
             //categories
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -1960,9 +2205,11 @@ namespace Nop.Web.Areas.Admin.Controllers
                 pageSize: command.PageSize,
                 showHidden: true
                 );
-            var gridModel = new DataSourceResult();
-            gridModel.Data = products.Select(x => x.ToModel());
-            gridModel.Total = products.TotalCount;
+            var gridModel = new DataSourceResult
+            {
+                Data = products.Select(x => x.ToModel()),
+                Total = products.TotalCount
+            };
 
             return Json(gridModel);
         }
@@ -1976,7 +2223,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             if (model.SelectedProductIds != null)
             {
-                foreach (int id in model.SelectedProductIds)
+                foreach (var id in model.SelectedProductIds)
                 {
                     var product = _productService.GetProductById(id);
                     if (product != null)
@@ -2078,9 +2325,11 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductModel.AddCrossSellProductModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
+            var model = new ProductModel.AddCrossSellProductModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null
+            };
 
             //categories
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -2135,9 +2384,11 @@ namespace Nop.Web.Areas.Admin.Controllers
                 pageSize: command.PageSize,
                 showHidden: true
                 );
-            var gridModel = new DataSourceResult();
-            gridModel.Data = products.Select(x => x.ToModel());
-            gridModel.Total = products.TotalCount;
+            var gridModel = new DataSourceResult
+            {
+                Data = products.Select(x => x.ToModel()),
+                Total = products.TotalCount
+            };
 
             return Json(gridModel);
         }
@@ -2151,7 +2402,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             if (model.SelectedProductIds != null)
             {
-                foreach (int id in model.SelectedProductIds)
+                foreach (var id in model.SelectedProductIds)
                 {
                     var product = _productService.GetProductById(id);
                     if (product != null)
@@ -2275,9 +2526,11 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductModel.AddAssociatedProductModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
+            var model = new ProductModel.AddAssociatedProductModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null
+            };
 
             //categories
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -2332,20 +2585,22 @@ namespace Nop.Web.Areas.Admin.Controllers
                 pageSize: command.PageSize,
                 showHidden: true
                 );
-            var gridModel = new DataSourceResult();
-            gridModel.Data = products.Select(x =>
+            var gridModel = new DataSourceResult
             {
-                var productModel = x.ToModel();
+                Data = products.Select(x =>
+                {
+                    var productModel = x.ToModel();
                 //display already associated products
                 var parentGroupedProduct = _productService.GetProductById(x.ParentGroupedProductId);
-                if (parentGroupedProduct != null)
-                {
-                    productModel.AssociatedToProductId = x.ParentGroupedProductId;
-                    productModel.AssociatedToProductName = parentGroupedProduct.Name;
-                }
-                return productModel;
-            });
-            gridModel.Total = products.TotalCount;
+                    if (parentGroupedProduct != null)
+                    {
+                        productModel.AssociatedToProductId = x.ParentGroupedProductId;
+                        productModel.AssociatedToProductName = parentGroupedProduct.Name;
+                    }
+                    return productModel;
+                }),
+                Total = products.TotalCount
+            };
 
             return Json(gridModel);
         }
@@ -2359,7 +2614,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             if (model.SelectedProductIds != null)
             {
-                foreach (int id in model.SelectedProductIds)
+                foreach (var id in model.SelectedProductIds)
                 {
                     var product = _productService.GetProductById(id);
                     if (product != null)
@@ -2401,6 +2656,9 @@ namespace Nop.Web.Areas.Admin.Controllers
             //a vendor should have access only to his products
             if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
                 return RedirectToAction("List");
+
+            if (_productService.GetProductPicturesByProductId(productId).Any(p => p.PictureId == pictureId))
+                return Json(new { Result = false });
 
             var picture = _pictureService.GetPictureById(pictureId);
             if (picture == null)
@@ -2884,7 +3142,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             var categoryIds = new List<int> { model.SearchCategoryId };
             //include subcategories
             if (model.SearchIncludeSubCategories && model.SearchCategoryId > 0)
-                categoryIds.AddRange(GetChildCategoryIds(model.SearchCategoryId));
+                categoryIds.AddRange(_categoryService.GetChildCategoryIds(parentCategoryId: model.SearchCategoryId, showHidden: true));
 
             //0 - all (according to "ShowHidden" parameter)
             //1 - published only
@@ -2940,7 +3198,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             var categoryIds = new List<int> { model.SearchCategoryId };
             //include subcategories
             if (model.SearchIncludeSubCategories && model.SearchCategoryId > 0)
-                categoryIds.AddRange(GetChildCategoryIds(model.SearchCategoryId));
+                categoryIds.AddRange(_categoryService.GetChildCategoryIds(parentCategoryId: model.SearchCategoryId, showHidden: true));
 
             //0 - all (according to "ShowHidden" parameter)
             //1 - published only
@@ -3018,7 +3276,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             var categoryIds = new List<int> { model.SearchCategoryId };
             //include subcategories
             if (model.SearchIncludeSubCategories && model.SearchCategoryId > 0)
-                categoryIds.AddRange(GetChildCategoryIds(model.SearchCategoryId));
+                categoryIds.AddRange(_categoryService.GetChildCategoryIds(parentCategoryId: model.SearchCategoryId, showHidden: true));
 
             //0 - all (according to "ShowHidden" parameter)
             //1 - published only
@@ -3120,52 +3378,62 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            return View();
+            var model = new LowStockProductListModel();
+
+            //prepare options to search by published low stock products
+            var allText = _localizationService.GetResource("Admin.Catalog.LowStockReport.SearchPublished.All");
+            model.AvailablePublishedOptions.Add(new SelectListItem { Text = allText, Value = "0" });
+            var publishedOnlyText = _localizationService.GetResource("Admin.Catalog.LowStockReport.SearchPublished.PublishedOnly");
+            model.AvailablePublishedOptions.Add(new SelectListItem { Text = publishedOnlyText, Value = "1" });
+            var unpublishedOnlyText = _localizationService.GetResource("Admin.Catalog.LowStockReport.SearchPublished.UnpublishedOnly");
+            model.AvailablePublishedOptions.Add(new SelectListItem { Text = unpublishedOnlyText, Value = "2" });
+
+            return View(model);
         }
 
         [HttpPost]
-        public virtual IActionResult LowStockReportList(DataSourceRequest command)
+        public virtual IActionResult LowStockReportList(DataSourceRequest command, LowStockProductListModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            int vendorId = 0;
             //a vendor should have access only to his products
-            if (_workContext.CurrentVendor != null)
-                vendorId = _workContext.CurrentVendor.Id;
+            var vendorId = _workContext.CurrentVendor?.Id;
 
-            IList<Product> products = _productService.GetLowStockProducts(vendorId);
-            IList<ProductAttributeCombination> combinations = _productService.GetLowStockProductCombinations(vendorId);
+            //whether to load unpublished products 
+            var loadPublishedOnly = model.SearchPublishedId == 0 ? null 
+                : model.SearchPublishedId == 1 ? true 
+                : model.SearchPublishedId == 2 ? (bool?)false 
+                : null;
 
+            //get low stock product and product combinations
+            var products = _productService.GetLowStockProducts(vendorId, loadPublishedOnly);
+            var combinations = _productService.GetLowStockProductCombinations(vendorId, loadPublishedOnly);
+
+            //prepare model
             var models = new List<LowStockProductModel>();
-            //products
-            foreach (var product in products)
+            models.AddRange(products.Select(product => new LowStockProductModel
             {
-                var lowStockModel = new LowStockProductModel
-                {
-                    Id = product.Id,
-                    Name = product.Name,
-                    ManageInventoryMethod = product.ManageInventoryMethod.GetLocalizedEnum(_localizationService, _workContext.WorkingLanguage.Id),
-                    StockQuantity = product.GetTotalStockQuantity(),
-                    Published = product.Published
-                };
-                models.Add(lowStockModel);
-            }
-            //combinations
-            foreach (var combination in combinations)
+                Id = product.Id,
+                Name = product.Name,
+                ManageInventoryMethod = product
+                    .ManageInventoryMethod.GetLocalizedEnum(_localizationService, _workContext.WorkingLanguage.Id),
+                StockQuantity = product.GetTotalStockQuantity(),
+                Published = product.Published
+            }));
+
+            models.AddRange(combinations.Select(combination => new LowStockProductModel
             {
-                var product = combination.Product;
-                var lowStockModel = new LowStockProductModel
-                {
-                    Id = product.Id,
-                    Name = product.Name,
-                    Attributes = _productAttributeFormatter.FormatAttributes(product, combination.AttributesXml, _workContext.CurrentCustomer, "<br />", true, true, true, false),
-                    ManageInventoryMethod = product.ManageInventoryMethod.GetLocalizedEnum(_localizationService, _workContext.WorkingLanguage.Id),
-                    StockQuantity = combination.StockQuantity,
-                    Published = product.Published
-                };
-                models.Add(lowStockModel);
-            }
+                Id = combination.Product.Id,
+                Name = combination.Product.Name,
+                Attributes = _productAttributeFormatter
+                    .FormatAttributes(combination.Product, combination.AttributesXml, _workContext.CurrentCustomer, "<br />", true, true, true, false),
+                ManageInventoryMethod = combination.Product
+                    .ManageInventoryMethod.GetLocalizedEnum(_localizationService, _workContext.WorkingLanguage.Id),
+                StockQuantity = combination.StockQuantity,
+                Published = combination.Product.Published
+            }));
+
             var gridModel = new DataSourceResult
             {
                 Data = models.PagedForCommand(command),
@@ -3210,7 +3478,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedKendoGridJson();
 
-            int vendorId = 0;
+            var vendorId = 0;
             //a vendor should have access only to his products
             if (_workContext.CurrentVendor != null)
                 vendorId = _workContext.CurrentVendor.Id;
@@ -3224,33 +3492,34 @@ namespace Nop.Web.Areas.Admin.Controllers
                 pageSize: command.PageSize,
                 showHidden: true);
 
-            var gridModel = new DataSourceResult();
-
-            gridModel.Data = products.Select(x =>
+            var gridModel = new DataSourceResult
             {
-                var productModel = new BulkEditProductModel
+                Data = products.Select(x =>
                 {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Sku = x.Sku,
-                    OldPrice = x.OldPrice,
-                    Price = x.Price,
-                    ManageInventoryMethod = x.ManageInventoryMethod.GetLocalizedEnum(_localizationService, _workContext.WorkingLanguage.Id),
-                    StockQuantity = x.StockQuantity,
-                    Published = x.Published
-                };
+                    var productModel = new BulkEditProductModel
+                    {
+                        Id = x.Id,
+                        Name = x.Name,
+                        Sku = x.Sku,
+                        OldPrice = x.OldPrice,
+                        Price = x.Price,
+                        ManageInventoryMethod = x.ManageInventoryMethod.GetLocalizedEnum(_localizationService, _workContext.WorkingLanguage.Id),
+                        StockQuantity = x.StockQuantity,
+                        Published = x.Published
+                    };
 
-                if (x.ManageInventoryMethod == ManageInventoryMethod.ManageStock && x.UseMultipleWarehouses)
-                {
+                    if (x.ManageInventoryMethod == ManageInventoryMethod.ManageStock && x.UseMultipleWarehouses)
+                    {
                     //multi-warehouse supported
                     //TODO localize
                     productModel.ManageInventoryMethod += " (multi-warehouse)";
-                }
+                    }
 
-                return productModel;
-            });
+                    return productModel;
+                }),
 
-            gridModel.Total = products.TotalCount;
+                Total = products.TotalCount
+            };
 
             return Json(gridModel);
         }
@@ -3609,7 +3878,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
-
         public virtual IActionResult ProductAttributeMappingCreate(int productId)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
@@ -3634,6 +3902,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             AddLocales(_languageService, model.Locales);
             return View(model);
         }
+
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public virtual IActionResult ProductAttributeMappingCreate(ProductModel.ProductAttributeMappingModel model, bool continueEditing)
         {
@@ -3692,6 +3961,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     AttributeValueType = AttributeValueType.Simple,
                     Name = predefinedValue.Name,
                     PriceAdjustment = predefinedValue.PriceAdjustment,
+                    PriceAdjustmentUsePercentage = predefinedValue.PriceAdjustmentUsePercentage,
                     WeightAdjustment = predefinedValue.WeightAdjustment,
                     Cost = predefinedValue.Cost,
                     IsPreSelected = predefinedValue.IsPreSelected,
@@ -3704,7 +3974,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 foreach (var lang in languages)
                 {
                     var name = predefinedValue.GetLocalized(x => x.Name, lang.Id, false, false);
-                    if (!String.IsNullOrEmpty(name))
+                    if (!string.IsNullOrEmpty(name))
                         _localizedEntityService.SaveLocalizedValue(pav, x => x.Name, name, lang.Id);
                 }
             }
@@ -3722,7 +3992,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             SaveSelectedTabName("tab-product-attributes");
             return RedirectToAction("Edit", new {id = product.Id});
         }
-
 
         public virtual IActionResult ProductAttributeMappingEdit(int id)
         {
@@ -3756,6 +4025,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             return View(model);
         }
+
         [HttpPost, ParameterBasedOnFormName("save-continue", "continueEditing")]
         public virtual IActionResult ProductAttributeMappingEdit(ProductModel.ProductAttributeMappingModel model, bool continueEditing)
         {
@@ -3875,7 +4145,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     }
                     var pictureThumbnailUrl = _pictureService.GetPictureUrl(x.PictureId, 75, false);
                     //little hack here. Grid is rendered wrong way with <img> without "src" attribute
-                    if (String.IsNullOrEmpty(pictureThumbnailUrl))
+                    if (string.IsNullOrEmpty(pictureThumbnailUrl))
                         pictureThumbnailUrl = _pictureService.GetPictureUrl(null, 1, true);
                     return new ProductModel.ProductAttributeValueModel
                     {
@@ -3889,7 +4159,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                         ColorSquaresRgb = x.ColorSquaresRgb,
                         ImageSquaresPictureId = x.ImageSquaresPictureId,
                         PriceAdjustment = x.PriceAdjustment,
-                        PriceAdjustmentStr = x.AttributeValueType == AttributeValueType.Simple ? x.PriceAdjustment.ToString("G29") : "",
+                        PriceAdjustmentStr = x.AttributeValueType == AttributeValueType.Simple ? x.PriceAdjustment.ToString("G29") + (x.PriceAdjustmentUsePercentage ? " %" : "") : "",
+                        PriceAdjustmentUsePercentage = x.PriceAdjustmentUsePercentage,
                         WeightAdjustment = x.WeightAdjustment,
                         WeightAdjustmentStr = x.AttributeValueType == AttributeValueType.Simple ? x.WeightAdjustment.ToString("G29") : "",
                         Cost = x.Cost,
@@ -3901,7 +4172,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                         PictureThumbnailUrl = pictureThumbnailUrl
                     };
                 }),
-                Total = values.Count()
+                Total = values.Count
             };
 
             return Json(gridModel);
@@ -3924,16 +4195,18 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
                 return RedirectToAction("List", "Product");
 
-            var model = new ProductModel.ProductAttributeValueModel();
-            model.ProductAttributeMappingId = productAttributeMappingId;
+            var model = new ProductModel.ProductAttributeValueModel
+            {
+                ProductAttributeMappingId = productAttributeMappingId,
 
-            //color squares
-            model.DisplayColorSquaresRgb = productAttributeMapping.AttributeControlType == AttributeControlType.ColorSquares;
-            //image squares
-            model.DisplayImageSquaresPicture = productAttributeMapping.AttributeControlType == AttributeControlType.ImageSquares;
+                //color squares
+                DisplayColorSquaresRgb = productAttributeMapping.AttributeControlType == AttributeControlType.ColorSquares,
+                //image squares
+                DisplayImageSquaresPicture = productAttributeMapping.AttributeControlType == AttributeControlType.ImageSquares,
 
-            //default qantity for associated product
-            model.Quantity = 1;
+                //default qantity for associated product
+                Quantity = 1
+            };
 
             //locales
             AddLocales(_languageService, model.Locales);
@@ -3974,7 +4247,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (productAttributeMapping.AttributeControlType == AttributeControlType.ColorSquares)
             {
                 //ensure valid color is chosen/entered
-                if (String.IsNullOrEmpty(model.ColorSquaresRgb))
+                if (string.IsNullOrEmpty(model.ColorSquaresRgb))
                     ModelState.AddModelError("", "Color is required");
                 try
                 {
@@ -4004,6 +4277,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     ColorSquaresRgb = model.ColorSquaresRgb,
                     ImageSquaresPictureId = model.ImageSquaresPictureId,
                     PriceAdjustment = model.PriceAdjustment,
+                    PriceAdjustmentUsePercentage = model.PriceAdjustmentUsePercentage,
                     WeightAdjustment = model.WeightAdjustment,
                     Cost = model.Cost,
                     CustomerEntersQty = model.CustomerEntersQty,
@@ -4073,6 +4347,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 ImageSquaresPictureId = pav.ImageSquaresPictureId,
                 DisplayImageSquaresPicture = pav.ProductAttributeMapping.AttributeControlType == AttributeControlType.ImageSquares,
                 PriceAdjustment = pav.PriceAdjustment,
+                PriceAdjustmentUsePercentage = pav.PriceAdjustmentUsePercentage,
                 WeightAdjustment = pav.WeightAdjustment,
                 Cost = pav.Cost,
                 CustomerEntersQty = pav.CustomerEntersQty,
@@ -4122,7 +4397,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (pav.ProductAttributeMapping.AttributeControlType == AttributeControlType.ColorSquares)
             {
                 //ensure valid color is chosen/entered
-                if (String.IsNullOrEmpty(model.ColorSquaresRgb))
+                if (string.IsNullOrEmpty(model.ColorSquaresRgb))
                     ModelState.AddModelError("", "Color is required");
                 try
                 {
@@ -4149,6 +4424,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 pav.ColorSquaresRgb = model.ColorSquaresRgb;
                 pav.ImageSquaresPictureId = model.ImageSquaresPictureId;
                 pav.PriceAdjustment = model.PriceAdjustment;
+                pav.PriceAdjustmentUsePercentage = model.PriceAdjustmentUsePercentage;
                 pav.WeightAdjustment = model.WeightAdjustment;
                 pav.Cost = model.Cost;
                 pav.CustomerEntersQty = model.CustomerEntersQty;
@@ -4212,9 +4488,11 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
 
-            var model = new ProductModel.ProductAttributeValueModel.AssociateProductToAttributeValueModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
+            var model = new ProductModel.ProductAttributeValueModel.AssociateProductToAttributeValueModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null
+            };
 
             //categories
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -4270,9 +4548,11 @@ namespace Nop.Web.Areas.Admin.Controllers
                 pageSize: command.PageSize,
                 showHidden: true
                 );
-            var gridModel = new DataSourceResult();
-            gridModel.Data = products.Select(x => x.ToModel());
-            gridModel.Total = products.TotalCount;
+            var gridModel = new DataSourceResult
+            {
+                Data = products.Select(x => x.ToModel()),
+                Total = products.TotalCount
+            };
 
             return Json(gridModel);
         }
@@ -4349,35 +4629,38 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return Content("This is not your product");
 
             var combinations = _productAttributeService.GetAllProductAttributeCombinations(productId);
-            var combinationsModel = combinations
-                .Select(x =>
-                {
-                    var pacModel = new ProductModel.ProductAttributeCombinationModel
-                    {
-                        Id = x.Id,
-                        ProductId = x.ProductId,
-                        AttributesXml = _productAttributeFormatter.FormatAttributes(x.Product, x.AttributesXml, _workContext.CurrentCustomer, "<br />", true, true, true, false),
-                        StockQuantity = x.StockQuantity,
-                        AllowOutOfStockOrders = x.AllowOutOfStockOrders,
-                        Sku = x.Sku,
-                        ManufacturerPartNumber = x.ManufacturerPartNumber,
-                        Gtin = x.Gtin,
-                        OverriddenPrice = x.OverriddenPrice,
-                        NotifyAdminForQuantityBelow = x.NotifyAdminForQuantityBelow
-                    };
-                    //warnings
-                    var warnings = _shoppingCartService.GetShoppingCartItemAttributeWarnings(_workContext.CurrentCustomer,
-                        ShoppingCartType.ShoppingCart, x.Product, 1, x.AttributesXml, true);
-                    for (int i = 0; i < warnings.Count; i++)
-                    {
-                        pacModel.Warnings += warnings[i];
-                        if (i != warnings.Count - 1)
-                            pacModel.Warnings += "<br />";
-                    }
+            var combinationsModel = combinations.Select(combination =>
+            {
+                //get thumb picture url
+                var pictureThumbnailUrl = _pictureService.GetPictureUrl(combination.PictureId, 75, false);
 
-                    return pacModel;
-                })
-                .ToList();
+                //little hack here. Grid is rendered wrong way with <img> without "src" attribute
+                if (string.IsNullOrEmpty(pictureThumbnailUrl))
+                    pictureThumbnailUrl = _pictureService.GetPictureUrl(null, 1);
+
+                //warnings
+                var warnings = _shoppingCartService.GetShoppingCartItemAttributeWarnings(_workContext.CurrentCustomer, ShoppingCartType.ShoppingCart,
+                    combination.Product, attributesXml: combination.AttributesXml, ignoreNonCombinableAttributes: true)
+                    .Aggregate(string.Empty, (message, warning) => $"{message}{warning}<br />");
+
+                return new ProductAttributeCombinationModel
+                {
+                    Id = combination.Id,
+                    ProductId = combination.ProductId,
+                    AttributesXml = _productAttributeFormatter.FormatAttributes(combination.Product, combination.AttributesXml, 
+                        _workContext.CurrentCustomer, "<br />", true, true, true, false),
+                    StockQuantity = combination.StockQuantity,
+                    AllowOutOfStockOrders = combination.AllowOutOfStockOrders,
+                    Sku = combination.Sku,
+                    ManufacturerPartNumber = combination.ManufacturerPartNumber,
+                    Gtin = combination.Gtin,
+                    OverriddenPrice = combination.OverriddenPrice,
+                    NotifyAdminForQuantityBelow = combination.NotifyAdminForQuantityBelow,
+                    PictureId = combination.PictureId,
+                    PictureThumbnailUrl = pictureThumbnailUrl,
+                    Warnings = new List<string> { warnings }
+                };
+            }).ToList();
 
             var gridModel = new DataSourceResult
             {
@@ -4386,42 +4669,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             };
 
             return Json(gridModel);
-        }
-
-        [HttpPost]
-        public virtual IActionResult ProductAttributeCombinationUpdate(ProductModel.ProductAttributeCombinationModel model)
-        {
-            if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
-                return AccessDeniedView();
-
-            var combination = _productAttributeService.GetProductAttributeCombinationById(model.Id);
-            if (combination == null)
-                throw new ArgumentException("No product attribute combination found with the specified id");
-
-            var product = _productService.GetProductById(combination.ProductId);
-            if (product == null)
-                throw new ArgumentException("No product found with the specified id");
-
-            //a vendor should have access only to his products
-            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
-                return Content("This is not your product");
-
-            var previousSrockQuantity = combination.StockQuantity;
-
-            combination.StockQuantity = model.StockQuantity;
-            combination.AllowOutOfStockOrders = model.AllowOutOfStockOrders;
-            combination.Sku = model.Sku;
-            combination.ManufacturerPartNumber = model.ManufacturerPartNumber;
-            combination.Gtin = model.Gtin;
-            combination.OverriddenPrice = model.OverriddenPrice;
-            combination.NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow;
-            _productAttributeService.UpdateProductAttributeCombination(combination);
-
-            //quantity change history
-            _productService.AddStockQuantityHistoryEntry(product, combination.StockQuantity - previousSrockQuantity, combination.StockQuantity,
-                message: _localizationService.GetResource("Admin.StockQuantityHistory.Messages.Combination.Edit"), combinationId: combination.Id);
-
-            return new NullJsonResult();
         }
 
         [HttpPost]
@@ -4447,7 +4694,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             return new NullJsonResult();
         }
 
-        public virtual IActionResult AddAttributeCombinationPopup(int productId)
+        public virtual IActionResult ProductAttributeCombinationCreatePopup(int productId)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
@@ -4461,13 +4708,14 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
                 return RedirectToAction("List", "Product");
             
-            var model = new AddProductAttributeCombinationModel();
-            PrepareAddProductAttributeCombinationModel(model, product);
+            var model = new ProductAttributeCombinationModel();
+            PrepareProductAttributeCombinationModel(model, product);
+
             return View(model);
         }
 
         [HttpPost]
-        public virtual IActionResult AddAttributeCombinationPopup(int productId, AddProductAttributeCombinationModel model)
+        public virtual IActionResult ProductAttributeCombinationCreatePopup(int productId, ProductAttributeCombinationModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return AccessDeniedView();
@@ -4482,149 +4730,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return RedirectToAction("List", "Product");
             
             //attributes
-            string attributesXml = "";
-            var form = model.Form;
             var warnings = new List<string>();
-
-            #region Product attributes
-
-                var attributes = _productAttributeService.GetProductAttributeMappingsByProductId(product.Id)
-                    //ignore non-combinable attributes for combinations
-                    .Where(x => !x.IsNonCombinable())
-                    .ToList();
-                foreach (var attribute in attributes)
-                {
-                    string controlId = $"product_attribute_{attribute.Id}";
-                    switch (attribute.AttributeControlType)
-                    {
-                        case AttributeControlType.DropdownList:
-                        case AttributeControlType.RadioList:
-                        case AttributeControlType.ColorSquares:
-                        case AttributeControlType.ImageSquares:
-                            {
-                                var ctrlAttributes = form[controlId];
-                                if (!String.IsNullOrEmpty(ctrlAttributes))
-                                {
-                                    int selectedAttributeId = int.Parse(ctrlAttributes);
-                                    if (selectedAttributeId > 0)
-                                        attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
-                                            attribute, selectedAttributeId.ToString());
-                                }
-                            }
-                            break;
-                        case AttributeControlType.Checkboxes:
-                            {
-                                var cblAttributes = form[controlId].ToString();
-                                if (!String.IsNullOrEmpty(cblAttributes))
-                                {
-                                    foreach (var item in cblAttributes.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-                                    {
-                                        int selectedAttributeId = int.Parse(item);
-                                        if (selectedAttributeId > 0)
-                                            attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
-                                                attribute, selectedAttributeId.ToString());
-                                    }
-                                }
-                            }
-                            break;
-                        case AttributeControlType.ReadonlyCheckboxes:
-                            {
-                                //load read-only (already server-side selected) values
-                                var attributeValues = _productAttributeService.GetProductAttributeValues(attribute.Id);
-                                foreach (var selectedAttributeId in attributeValues
-                                    .Where(v => v.IsPreSelected)
-                                    .Select(v => v.Id)
-                                    .ToList())
-                                {
-                                    attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
-                                        attribute, selectedAttributeId.ToString());
-                                }
-                            }
-                            break;
-                        case AttributeControlType.TextBox:
-                        case AttributeControlType.MultilineTextbox:
-                            {
-                                var ctrlAttributes = form[controlId].ToString();
-                                if (!String.IsNullOrEmpty(ctrlAttributes))
-                                {
-                                    string enteredText = ctrlAttributes.Trim();
-                                    attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
-                                        attribute, enteredText);
-                                }
-                            }
-                            break;
-                        case AttributeControlType.Datepicker:
-                            {
-                                var date = form[controlId + "_day"];
-                                var month = form[controlId + "_month"];
-                                var year = form[controlId + "_year"];
-                                DateTime? selectedDate = null;
-                                try
-                                {
-                                    selectedDate = new DateTime(Int32.Parse(year), Int32.Parse(month), Int32.Parse(date));
-                                }
-                                catch { }
-                                if (selectedDate.HasValue)
-                                {
-                                    attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
-                                        attribute, selectedDate.Value.ToString("D"));
-                                }
-                            }
-                            break;
-                        case AttributeControlType.FileUpload:
-                            {
-                                var httpPostedFile = this.Request.Form.Files[controlId];
-                                if ((httpPostedFile != null) && (!String.IsNullOrEmpty(httpPostedFile.FileName)))
-                                {
-                                    var fileSizeOk = true;
-                                    if (attribute.ValidationFileMaximumSize.HasValue)
-                                    {
-                                        //compare in bytes
-                                        var maxFileSizeBytes = attribute.ValidationFileMaximumSize.Value * 1024;
-                                        if (httpPostedFile.Length > maxFileSizeBytes)
-                                        {
-                                            warnings.Add(string.Format(_localizationService.GetResource("ShoppingCart.MaximumUploadedFileSize"), attribute.ValidationFileMaximumSize.Value));
-                                            fileSizeOk = false;
-                                        }
-                                    }
-                                    if (fileSizeOk)
-                                    {
-                                        //save an uploaded file
-                                        var download = new Download
-                                        {
-                                            DownloadGuid = Guid.NewGuid(),
-                                            UseDownloadUrl = false,
-                                            DownloadUrl = "",
-                                            DownloadBinary = httpPostedFile.GetDownloadBits(),
-                                            ContentType = httpPostedFile.ContentType,
-                                            Filename = Path.GetFileNameWithoutExtension(httpPostedFile.FileName),
-                                            Extension = Path.GetExtension(httpPostedFile.FileName),
-                                            IsNew = true
-                                        };
-                                        _downloadService.InsertDownload(download);
-
-                                        //save attribute
-                                        attributesXml = _productAttributeParser.AddProductAttribute(attributesXml,
-                                            attribute, download.DownloadGuid.ToString());
-                                    }
-                                }
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                //validate conditional attributes (if specified)
-                foreach (var attribute in attributes)
-                {
-                    var conditionMet = _productAttributeParser.IsConditionMet(attribute, attributesXml);
-                    if (conditionMet.HasValue && !conditionMet.Value)
-                    {
-                        attributesXml = _productAttributeParser.RemoveProductAttribute(attributesXml, attribute);
-                    }
-                }
-
-                #endregion
+            var attributesXml = GetAttributesXmlForProductAttributeCombination(model.Form, warnings, product.Id);
 
             warnings.AddRange(_shoppingCartService.GetShoppingCartItemAttributeWarnings(_workContext.CurrentCustomer,
                 ShoppingCartType.ShoppingCart, product, 1, attributesXml, true));
@@ -4648,6 +4755,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                     Gtin = model.Gtin,
                     OverriddenPrice = model.OverriddenPrice,
                     NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow,
+                    PictureId = model.PictureId
                 };
                 _productAttributeService.InsertProductAttributeCombination(combination);
 
@@ -4660,8 +4768,142 @@ namespace Nop.Web.Areas.Admin.Controllers
             }
 
             //If we got this far, something failed, redisplay form
-            PrepareAddProductAttributeCombinationModel(model, product);
+            PrepareProductAttributeCombinationModel(model, product);
             model.Warnings = warnings;
+
+            return View(model);
+        }
+
+        public virtual IActionResult ProductAttributeCombinationGeneratePopup(int productId)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
+                return AccessDeniedView();
+
+            var product = _productService.GetProductById(productId);
+            if (product == null)
+                //No product found with the specified id
+                return RedirectToAction("List", "Product");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return RedirectToAction("List", "Product");
+
+            var model = new ProductAttributeCombinationModel();
+            PrepareProductAttributeCombinationModel(model, product);
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public virtual IActionResult ProductAttributeCombinationGeneratePopup(IFormCollection form, ProductAttributeCombinationModel model)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
+                return AccessDeniedView();
+
+            var product = _productService.GetProductById(model.ProductId);
+            if (product == null)
+                //No product found with the specified id
+                return RedirectToAction("List", "Product");
+
+            var allowedAttributeIds = form.Keys.Where(key => key.Contains("attribute_value_"))
+                .Select(key => int.TryParse(form[key], out int id) ? id : 0).Where(id => id > 0).ToList();
+
+            var requiredAttributeNames = _productAttributeService.GetProductAttributeMappingsByProductId(product.Id)
+                .Where(pam => pam.IsRequired)
+                .Where(pam => !pam.IsNonCombinable())
+                .Where(pam => !pam.ProductAttributeValues.Any(v => allowedAttributeIds.Any(id => id == v.Id)))
+                .Select(pam => pam.ProductAttribute.Name).ToList();
+            
+            if (requiredAttributeNames.Any())
+            {
+                model = new ProductAttributeCombinationModel();
+                PrepareProductAttributeCombinationModel(model, product);
+                model.ProductAttributes.SelectMany(pa => pa.Values)
+                    .Where(v => allowedAttributeIds.Any(id => id == v.Id))
+                    .ToList().ForEach(v => v.Checked = "checked");
+
+                model.Warnings.Add(string.Format(_localizationService.GetResource("Admin.Catalog.Products.ProductAttributes.AttributeCombinations.SelectRequiredAttributes"), string.Join(", ", requiredAttributeNames)));
+                
+                return View(model);
+            }
+
+            GenerateAttributeCombinations(product, allowedAttributeIds);
+
+            ViewBag.RefreshPage = true;
+            return View(new ProductAttributeCombinationModel());
+        }
+        
+        public virtual IActionResult ProductAttributeCombinationEditPopup(int id)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
+                return AccessDeniedView();
+
+            var combination = _productAttributeService.GetProductAttributeCombinationById(id);
+            if (combination == null)
+                //No attribute combination found with the specified id
+                return RedirectToAction("List", "Product");
+
+            var product = _productService.GetProductById(combination.ProductId);
+            if (product == null)
+                //No product found with the specified id
+                return RedirectToAction("List", "Product");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return RedirectToAction("List", "Product");
+
+            var model = new ProductAttributeCombinationModel();
+            PrepareProductAttributeCombinationModel(model, product, combination);
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public virtual IActionResult ProductAttributeCombinationEditPopup(ProductAttributeCombinationModel model)
+        {
+            if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
+                return AccessDeniedView();
+
+            var combination = _productAttributeService.GetProductAttributeCombinationById(model.Id);
+            if (combination == null)
+                //No attribute combination found with the specified id
+                return RedirectToAction("List", "Product");
+
+            var product = _productService.GetProductById(combination.ProductId);
+            if (product == null)
+                //No product found with the specified id
+                return RedirectToAction("List", "Product");
+
+            //a vendor should have access only to his products
+            if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
+                return RedirectToAction("List", "Product");
+            
+            if (ModelState.IsValid)
+            {
+                var previousStockQuantity = combination.StockQuantity;
+
+                //save combination
+                combination.AllowOutOfStockOrders = model.AllowOutOfStockOrders;
+                combination.Gtin = model.Gtin;
+                combination.ManufacturerPartNumber = model.ManufacturerPartNumber;
+                combination.NotifyAdminForQuantityBelow = model.NotifyAdminForQuantityBelow;
+                combination.OverriddenPrice = model.OverriddenPrice;
+                combination.PictureId = model.PictureId;
+                combination.Sku = model.Sku;
+                combination.StockQuantity = model.StockQuantity;
+                _productAttributeService.UpdateProductAttributeCombination(combination);
+
+                //quantity change history
+                _productService.AddStockQuantityHistoryEntry(product, combination.StockQuantity - previousStockQuantity, combination.StockQuantity,
+                    message: _localizationService.GetResource("Admin.StockQuantityHistory.Messages.Combination.Edit"), combinationId: combination.Id);
+
+                ViewBag.RefreshPage = true;
+                return View(model);
+            }
+
+            //If we got this far, something failed, redisplay form
+            PrepareProductAttributeCombinationModel(model, product, combination);
+
             return View(model);
         }
 
@@ -4679,37 +4921,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (_workContext.CurrentVendor != null && product.VendorId != _workContext.CurrentVendor.Id)
                 return Content("This is not your product");
 
-            var allAttributesXml = _productAttributeParser.GenerateAllCombinations(product, true);
-            foreach (var attributesXml in allAttributesXml)
-            {
-                var existingCombination = _productAttributeParser.FindProductAttributeCombination(product, attributesXml);
-
-                //already exists?
-                if (existingCombination != null)
-                    continue;
-
-                //new one
-                var warnings = new List<string>();
-                warnings.AddRange(_shoppingCartService.GetShoppingCartItemAttributeWarnings(_workContext.CurrentCustomer,
-                    ShoppingCartType.ShoppingCart, product, 1, attributesXml, true));
-                if (warnings.Count != 0)
-                    continue;
-
-                //save combination
-                var combination = new ProductAttributeCombination
-                {
-                    ProductId = product.Id,
-                    AttributesXml = attributesXml,
-                    StockQuantity = 0,
-                    AllowOutOfStockOrders = false,
-                    Sku = null,
-                    ManufacturerPartNumber = null,
-                    Gtin = null,
-                    OverriddenPrice = null,
-                    NotifyAdminForQuantityBelow = 1
-                };
-                _productAttributeService.InsertProductAttributeCombination(combination);
-            }
+            GenerateAttributeCombinations(product);
             return Json(new { Success = true });
         }
 
@@ -4732,7 +4944,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             _settingService.SaveSetting(productEditorSettings);
 
             //product list
-            if (String.IsNullOrEmpty(returnUrl))
+            if (string.IsNullOrEmpty(returnUrl))
                 return RedirectToAction("List");
 
             //prevent open redirection attack

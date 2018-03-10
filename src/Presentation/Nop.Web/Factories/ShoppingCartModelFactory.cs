@@ -14,6 +14,7 @@ using Nop.Core.Domain.Media;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Shipping;
 using Nop.Core.Domain.Tax;
+using Nop.Core.Domain.Vendors;
 using Nop.Core.Http.Extensions;
 using Nop.Services.Catalog;
 using Nop.Services.Common;
@@ -28,6 +29,7 @@ using Nop.Services.Security;
 using Nop.Services.Seo;
 using Nop.Services.Shipping;
 using Nop.Services.Tax;
+using Nop.Services.Vendors;
 using Nop.Web.Framework.Security.Captcha;
 using Nop.Web.Infrastructure.Cache;
 using Nop.Web.Models.Common;
@@ -49,6 +51,7 @@ namespace Nop.Web.Factories
         private readonly IShoppingCartService _shoppingCartService;
         private readonly IPictureService _pictureService;
         private readonly ILocalizationService _localizationService;
+        private readonly IProductService _productService;
         private readonly IProductAttributeFormatter _productAttributeFormatter;
         private readonly IProductAttributeParser _productAttributeParser;
         private readonly ITaxService _taxService;
@@ -83,6 +86,8 @@ namespace Nop.Web.Factories
         private readonly AddressSettings _addressSettings;
         private readonly RewardPointsSettings _rewardPointsSettings;
         private readonly CustomerSettings _customerSettings;
+        private readonly IVendorService _vendorService;
+        private readonly VendorSettings _vendorSettings;
 
         #endregion
 
@@ -93,7 +98,8 @@ namespace Nop.Web.Factories
             IWorkContext workContext,
             IShoppingCartService shoppingCartService, 
             IPictureService pictureService,
-            ILocalizationService localizationService, 
+            ILocalizationService localizationService,
+            IProductService productService, 
             IProductAttributeFormatter productAttributeFormatter,
             IProductAttributeParser productAttributeParser,
             ITaxService taxService, ICurrencyService currencyService, 
@@ -125,7 +131,9 @@ namespace Nop.Web.Factories
             CaptchaSettings captchaSettings, 
             AddressSettings addressSettings,
             RewardPointsSettings rewardPointsSettings,
-            CustomerSettings customerSettings)
+            CustomerSettings customerSettings,
+            IVendorService vendorService,
+            VendorSettings vendorSettings)
         {
             this._addressModelFactory = addressModelFactory;
             this._workContext = workContext;
@@ -133,6 +141,7 @@ namespace Nop.Web.Factories
             this._shoppingCartService = shoppingCartService;
             this._pictureService = pictureService;
             this._localizationService = localizationService;
+            this._productService = productService;
             this._productAttributeFormatter = productAttributeFormatter;
             this._productAttributeParser = productAttributeParser;
             this._taxService = taxService;
@@ -167,6 +176,8 @@ namespace Nop.Web.Factories
             this._addressSettings = addressSettings;
             this._rewardPointsSettings = rewardPointsSettings;
             this._customerSettings = customerSettings;
+            this._vendorService = vendorService;
+            this._vendorSettings = vendorSettings;
         }
 
         #endregion
@@ -185,7 +196,8 @@ namespace Nop.Web.Factories
 
             var model = new List<ShoppingCartModel.CheckoutAttributeModel>();
 
-            var checkoutAttributes = _checkoutAttributeService.GetAllCheckoutAttributes(_storeContext.CurrentStore.Id, !cart.RequiresShipping());
+            var excludeShippableAttributes = !cart.RequiresShipping(_productService, _productAttributeParser);
+            var checkoutAttributes = _checkoutAttributeService.GetAllCheckoutAttributes(_storeContext.CurrentStore.Id, excludeShippableAttributes);
             foreach (var attribute in checkoutAttributes)
             {
                 var attributeModel = new ShoppingCartModel.CheckoutAttributeModel
@@ -197,7 +209,7 @@ namespace Nop.Web.Factories
                     AttributeControlType = attribute.AttributeControlType,
                     DefaultValue = attribute.DefaultValue
                 };
-                if (!String.IsNullOrEmpty(attribute.ValidationFileAllowedExtensions))
+                if (!string.IsNullOrEmpty(attribute.ValidationFileAllowedExtensions))
                 {
                     attributeModel.AllowedFileExtensions = attribute.ValidationFileAllowedExtensions
                         .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
@@ -222,8 +234,8 @@ namespace Nop.Web.Factories
                         //display price if allowed
                         if (_permissionService.Authorize(StandardPermissionProvider.DisplayPrices))
                         {
-                            decimal priceAdjustmentBase = _taxService.GetCheckoutAttributePrice(attributeValue);
-                            decimal priceAdjustment = _currencyService.ConvertFromPrimaryStoreCurrency(priceAdjustmentBase, _workContext.WorkingCurrency);
+                            var priceAdjustmentBase = _taxService.GetCheckoutAttributePrice(attributeValue);
+                            var priceAdjustment = _currencyService.ConvertFromPrimaryStoreCurrency(priceAdjustmentBase, _workContext.WorkingCurrency);
                             if (priceAdjustmentBase > decimal.Zero)
                                 attributeValueModel.PriceAdjustment = "+" + _priceFormatter.FormatPrice(priceAdjustment);
                             else if (priceAdjustmentBase < decimal.Zero)
@@ -231,8 +243,6 @@ namespace Nop.Web.Factories
                         }
                     }
                 }
-
-
 
                 //set already selected attributes
                 var selectedCheckoutAttributes = _workContext.CurrentCustomer.GetAttribute<string>(SystemCustomerAttributeNames.CheckoutAttributes, _genericAttributeService, _storeContext.CurrentStore.Id);
@@ -244,7 +254,7 @@ namespace Nop.Web.Factories
                     case AttributeControlType.ColorSquares:
                     case AttributeControlType.ImageSquares:
                         {
-                            if (!String.IsNullOrEmpty(selectedCheckoutAttributes))
+                            if (!string.IsNullOrEmpty(selectedCheckoutAttributes))
                             {
                                 //clear default selection
                                 foreach (var item in attributeModel.Values)
@@ -268,7 +278,7 @@ namespace Nop.Web.Factories
                     case AttributeControlType.TextBox:
                     case AttributeControlType.MultilineTextbox:
                         {
-                            if (!String.IsNullOrEmpty(selectedCheckoutAttributes))
+                            if (!string.IsNullOrEmpty(selectedCheckoutAttributes))
                             {
                                 var enteredText = _checkoutAttributeParser.ParseValues(selectedCheckoutAttributes, attribute.Id);
                                 if (enteredText.Any())
@@ -295,7 +305,7 @@ namespace Nop.Web.Factories
                         break;
                     case AttributeControlType.FileUpload:
                         {
-                            if (!String.IsNullOrEmpty(selectedCheckoutAttributes))
+                            if (!string.IsNullOrEmpty(selectedCheckoutAttributes))
                             {
                                 var downloadGuidStr = _checkoutAttributeParser.ParseValues(selectedCheckoutAttributes, attribute.Id).FirstOrDefault();
                                 Guid.TryParse(downloadGuidStr, out Guid downloadGuid);
@@ -321,7 +331,7 @@ namespace Nop.Web.Factories
         /// <param name="cart">List of the shopping cart item</param>
         /// <param name="sci">Shopping cart item</param>
         /// <returns>Shopping cart item model</returns>
-        protected virtual ShoppingCartModel.ShoppingCartItemModel PrepareShoppingCartItemModel(IList<ShoppingCartItem> cart, ShoppingCartItem sci)
+        protected virtual ShoppingCartModel.ShoppingCartItemModel PrepareShoppingCartItemModel(IList<ShoppingCartItem> cart, ShoppingCartItem sci, IList<Vendor> vendors)
         {
             if (cart == null)
                 throw new ArgumentNullException(nameof(cart));
@@ -329,11 +339,11 @@ namespace Nop.Web.Factories
             if (sci == null)
                 throw new ArgumentNullException(nameof(sci));
 
-
             var cartItemModel = new ShoppingCartModel.ShoppingCartItemModel
             {
                 Id = sci.Id,
                 Sku = sci.Product.FormatSku(sci.AttributesXml, _productAttributeParser),
+                VendorName = vendors.FirstOrDefault(v => v.Id == sci.Product.VendorId)?.Name ?? string.Empty,
                 ProductId = sci.Product.Id,
                 ProductName = sci.Product.GetLocalized(x => x.Name),
                 ProductSeName = sci.Product.GetSeName(),
@@ -348,7 +358,7 @@ namespace Nop.Web.Factories
             //4. visible individually?
             cartItemModel.AllowItemEditing = _shoppingCartSettings.AllowCartItemEditing &&
                                              sci.Product.ProductType == ProductType.SimpleProduct &&
-                                             (!String.IsNullOrEmpty(cartItemModel.AttributeInfo) ||
+                                             (!string.IsNullOrEmpty(cartItemModel.AttributeInfo) ||
                                               sci.Product.IsGiftCard) &&
                                              sci.Product.VisibleIndividually;
 
@@ -397,8 +407,8 @@ namespace Nop.Web.Factories
             }
             else
             {
-                decimal shoppingCartUnitPriceWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetUnitPrice(sci), out decimal _);
-                decimal shoppingCartUnitPriceWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartUnitPriceWithDiscountBase, _workContext.WorkingCurrency);
+                var shoppingCartUnitPriceWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetUnitPrice(sci), out decimal _);
+                var shoppingCartUnitPriceWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartUnitPriceWithDiscountBase, _workContext.WorkingCurrency);
                 cartItemModel.UnitPrice = _priceFormatter.FormatPrice(shoppingCartUnitPriceWithDiscount);
             }
             //subtotal, discount
@@ -411,8 +421,8 @@ namespace Nop.Web.Factories
             else
             {
                 //sub total
-                decimal shoppingCartItemSubTotalWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetSubTotal(sci, true, out decimal shoppingCartItemDiscountBase, out List<DiscountForCaching> _, out int? maximumDiscountQty), out decimal taxRate);
-                decimal shoppingCartItemSubTotalWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartItemSubTotalWithDiscountBase, _workContext.WorkingCurrency);
+                var shoppingCartItemSubTotalWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetSubTotal(sci, true, out decimal shoppingCartItemDiscountBase, out List<DiscountForCaching> _, out int? maximumDiscountQty), out decimal taxRate);
+                var shoppingCartItemSubTotalWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartItemSubTotalWithDiscountBase, _workContext.WorkingCurrency);
                 cartItemModel.SubTotal = _priceFormatter.FormatPrice(shoppingCartItemSubTotalWithDiscount);
                 cartItemModel.MaximumDiscountedQty = maximumDiscountQty;
 
@@ -422,7 +432,7 @@ namespace Nop.Web.Factories
                     shoppingCartItemDiscountBase = _taxService.GetProductPrice(sci.Product, shoppingCartItemDiscountBase, out taxRate);
                     if (shoppingCartItemDiscountBase > decimal.Zero)
                     {
-                        decimal shoppingCartItemDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartItemDiscountBase, _workContext.WorkingCurrency);
+                        var shoppingCartItemDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartItemDiscountBase, _workContext.WorkingCurrency);
                         cartItemModel.Discount = _priceFormatter.FormatPrice(shoppingCartItemDiscount);
                     }
                 }
@@ -485,7 +495,7 @@ namespace Nop.Web.Factories
             //4. visible individually?
             cartItemModel.AllowItemEditing = _shoppingCartSettings.AllowCartItemEditing &&
                                              sci.Product.ProductType == ProductType.SimpleProduct &&
-                                             (!String.IsNullOrEmpty(cartItemModel.AttributeInfo) ||
+                                             (!string.IsNullOrEmpty(cartItemModel.AttributeInfo) ||
                                               sci.Product.IsGiftCard) &&
                                              sci.Product.VisibleIndividually;
 
@@ -500,7 +510,6 @@ namespace Nop.Web.Factories
                     Selected = sci.Quantity == qty
                 });
             }
-
 
             //recurring info
             if (sci.Product.IsRecurring)
@@ -531,8 +540,8 @@ namespace Nop.Web.Factories
             }
             else
             {
-                decimal shoppingCartUnitPriceWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetUnitPrice(sci), out decimal _);
-                decimal shoppingCartUnitPriceWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartUnitPriceWithDiscountBase, _workContext.WorkingCurrency);
+                var shoppingCartUnitPriceWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetUnitPrice(sci), out decimal _);
+                var shoppingCartUnitPriceWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartUnitPriceWithDiscountBase, _workContext.WorkingCurrency);
                 cartItemModel.UnitPrice = _priceFormatter.FormatPrice(shoppingCartUnitPriceWithDiscount);
             }
             //subtotal, discount
@@ -545,8 +554,8 @@ namespace Nop.Web.Factories
             else
             {
                 //sub total
-                decimal shoppingCartItemSubTotalWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetSubTotal(sci, true, out decimal shoppingCartItemDiscountBase, out List<DiscountForCaching> _, out int? maximumDiscountQty), out decimal taxRate);
-                decimal shoppingCartItemSubTotalWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartItemSubTotalWithDiscountBase, _workContext.WorkingCurrency);
+                var shoppingCartItemSubTotalWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetSubTotal(sci, true, out decimal shoppingCartItemDiscountBase, out List<DiscountForCaching> _, out int? maximumDiscountQty), out decimal taxRate);
+                var shoppingCartItemSubTotalWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartItemSubTotalWithDiscountBase, _workContext.WorkingCurrency);
                 cartItemModel.SubTotal = _priceFormatter.FormatPrice(shoppingCartItemSubTotalWithDiscount);
                 cartItemModel.MaximumDiscountedQty = maximumDiscountQty;
 
@@ -556,7 +565,7 @@ namespace Nop.Web.Factories
                     shoppingCartItemDiscountBase = _taxService.GetProductPrice(sci.Product, shoppingCartItemDiscountBase, out taxRate);
                     if (shoppingCartItemDiscountBase > decimal.Zero)
                     {
-                        decimal shoppingCartItemDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartItemDiscountBase, _workContext.WorkingCurrency);
+                        var shoppingCartItemDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartItemDiscountBase, _workContext.WorkingCurrency);
                         cartItemModel.Discount = _priceFormatter.FormatPrice(shoppingCartItemDiscount);
                     }
                 }
@@ -597,8 +606,10 @@ namespace Nop.Web.Factories
             if (cart == null)
                 throw new ArgumentNullException(nameof(cart));
 
-            var model = new ShoppingCartModel.OrderReviewDataModel();
-            model.Display = true;
+            var model = new ShoppingCartModel.OrderReviewDataModel
+            {
+                Display = true
+            };
 
             //billing info
             var billingAddress = _workContext.CurrentCustomer.BillingAddress;
@@ -611,7 +622,7 @@ namespace Nop.Web.Factories
             }
 
             //shipping info
-            if (cart.RequiresShipping())
+            if (cart.RequiresShipping(_productService, _productAttributeParser))
             {
                 model.IsShippable = true;
 
@@ -636,6 +647,7 @@ namespace Nop.Web.Factories
                     {
                         Address1 = pickupPoint.Address,
                         City = pickupPoint.City,
+                        County = pickupPoint.County,
                         CountryName = country?.Name ?? string.Empty,
                         StateProvinceName = state?.Name ?? string.Empty,
                         ZipPostalCode = pickupPoint.ZipPostalCode
@@ -678,13 +690,14 @@ namespace Nop.Web.Factories
             if (cart == null)
                 throw new ArgumentNullException(nameof(cart));
 
-            var model = new EstimateShippingModel();
-
-            model.Enabled = cart.Any() && cart.RequiresShipping() && _shippingSettings.EstimateShippingEnabled;
+            var model = new EstimateShippingModel
+            {
+                Enabled = cart.Any() && cart.RequiresShipping(_productService, _productAttributeParser) && _shippingSettings.EstimateShippingEnabled
+            };
             if (model.Enabled)
             {
                 //countries
-                int? defaultEstimateCountryId = (setEstimateShippingDefaultAddress && _workContext.CurrentCustomer.ShippingAddress != null)
+                var defaultEstimateCountryId = (setEstimateShippingDefaultAddress && _workContext.CurrentCustomer.ShippingAddress != null)
                     ? _workContext.CurrentCustomer.ShippingAddress.CountryId
                     : model.CountryId;
                 model.AvailableCountries.Add(new SelectListItem
@@ -702,7 +715,7 @@ namespace Nop.Web.Factories
                     });
 
                 //states
-                int? defaultEstimateStateId = (setEstimateShippingDefaultAddress && _workContext.CurrentCustomer.ShippingAddress != null)
+                var defaultEstimateStateId = (setEstimateShippingDefaultAddress && _workContext.CurrentCustomer.ShippingAddress != null)
                     ? _workContext.CurrentCustomer.ShippingAddress.StateProvinceId
                     : model.StateProvinceId;
                 var states = defaultEstimateCountryId.HasValue
@@ -791,11 +804,12 @@ namespace Nop.Web.Factories
             model.IsEditable = isEditable;
             model.ShowProductImages = _shoppingCartSettings.ShowProductImagesOnShoppingCart;
             model.ShowSku = _catalogSettings.ShowSkuOnProductDetailsPage;
+            model.ShowVendorName = _vendorSettings.ShowVendorOnOrderDetailsPage;
             var checkoutAttributesXml = _workContext.CurrentCustomer.GetAttribute<string>(SystemCustomerAttributeNames.CheckoutAttributes, _genericAttributeService, _storeContext.CurrentStore.Id);
-            bool minOrderSubtotalAmountOk = _orderProcessingService.ValidateMinOrderSubtotalAmount(cart);
+            var minOrderSubtotalAmountOk = _orderProcessingService.ValidateMinOrderSubtotalAmount(cart);
             if (!minOrderSubtotalAmountOk)
             {
-                decimal minOrderSubtotalAmount = _currencyService.ConvertFromPrimaryStoreCurrency(_orderSettings.MinOrderSubtotalAmount, _workContext.WorkingCurrency);
+                var minOrderSubtotalAmount = _currencyService.ConvertFromPrimaryStoreCurrency(_orderSettings.MinOrderSubtotalAmount, _workContext.WorkingCurrency);
                 model.MinOrderSubtotalWarning = string.Format(_localizationService.GetResource("Checkout.MinOrderSubtotalAmount"), _priceFormatter.FormatPrice(minOrderSubtotalAmount, true, false));
             }
             model.TermsOfServiceOnShoppingCartPage = _orderSettings.TermsOfServiceOnShoppingCartPage;
@@ -829,16 +843,17 @@ namespace Nop.Web.Factories
 
             //checkout attributes
             model.CheckoutAttributes = PrepareCheckoutAttributeModels(cart);
+
+            var vendors = _vendorSettings.ShowVendorOnOrderDetailsPage ? _vendorService.GetVendorsByIds(cart.Select(item => item.Product.VendorId).ToArray()) : new List<Vendor>();
     
             //cart items
             foreach (var sci in cart)
             {
-                var cartItemModel = PrepareShoppingCartItemModel(cart, sci);
+                var cartItemModel = PrepareShoppingCartItemModel(cart, sci, vendors);
                 model.Items.Add(cartItemModel);
             }
             
-            #region Payment methods
-
+            //payment methods
             //all payment methods (do not filter by country here as it could be not specified yet)
             var paymentMethods = _paymentService
                 .LoadActivePaymentMethods(_workContext.CurrentCustomer, _storeContext.CurrentStore.Id)
@@ -852,20 +867,17 @@ namespace Nop.Web.Factories
             var buttonPaymentMethods = paymentMethods
                 .Where(pm => pm.PaymentMethodType == PaymentMethodType.Button)
                 .ToList();
-
             foreach (var pm in buttonPaymentMethods)
             {
                 if (cart.IsRecurring() && pm.RecurringPaymentType == RecurringPaymentType.NotSupported)
                     continue;
 
-                pm.GetPublicViewComponent(out string viewComponentName);
+                var viewComponentName = pm.GetPublicViewComponentName();
                 model.ButtonPaymentMethodViewComponentNames.Add(viewComponentName);
             }
             //hide "Checkout" button if we have only "Button" payment methods
             model.HideCheckoutButton = !nonButtonPaymentMethods.Any() && model.ButtonPaymentMethodViewComponentNames.Any();
             
-            #endregion
-
             //order review data
             if (prepareAndDisplayOrderReviewData)
             {
@@ -935,7 +947,6 @@ namespace Nop.Web.Factories
                 AnonymousCheckoutAllowed = _orderSettings.AnonymousCheckoutAllowed,
             };
 
-
             //performance optimization (use "HasShoppingCartItems" property)
             if (_workContext.CurrentCustomer.HasShoppingCartItems)
             {
@@ -949,11 +960,11 @@ namespace Nop.Web.Factories
                     //subtotal
                     var subTotalIncludingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax && !_taxSettings.ForceTaxExclusionFromOrderSubtotal;
                     _orderTotalCalculationService.GetShoppingCartSubTotal(cart, subTotalIncludingTax, out decimal _, out List<DiscountForCaching> _, out decimal subTotalWithoutDiscountBase, out decimal _);
-                    decimal subtotalBase = subTotalWithoutDiscountBase;
-                    decimal subtotal = _currencyService.ConvertFromPrimaryStoreCurrency(subtotalBase, _workContext.WorkingCurrency);
+                    var subtotalBase = subTotalWithoutDiscountBase;
+                    var subtotal = _currencyService.ConvertFromPrimaryStoreCurrency(subtotalBase, _workContext.WorkingCurrency);
                     model.SubTotal = _priceFormatter.FormatPrice(subtotal, false, _workContext.WorkingCurrency, _workContext.WorkingLanguage, subTotalIncludingTax);
 
-                    var requiresShipping = cart.RequiresShipping();
+                    var requiresShipping = cart.RequiresShipping(_productService, _productAttributeParser);
                     //a customer should visit the shopping cart page (hide checkout button) before going to checkout if:
                     //1. "terms of service" are enabled
                     //2. min order sub-total is OK
@@ -967,8 +978,8 @@ namespace Nop.Web.Factories
                             return checkoutAttributes.Any();
                         });
 
-                    bool minOrderSubtotalAmountOk = _orderProcessingService.ValidateMinOrderSubtotalAmount(cart);
-                    bool downloadableProductsRequireRegistration =
+                    var minOrderSubtotalAmountOk = _orderProcessingService.ValidateMinOrderSubtotalAmount(cart);
+                    var downloadableProductsRequireRegistration =
                         _customerSettings.RequireRegistrationForDownloadableProducts && cart.Any(sci => sci.Product.IsDownload);
 
                     model.DisplayCheckoutButton = !_orderSettings.TermsOfServiceOnShoppingCartPage &&
@@ -1002,8 +1013,8 @@ namespace Nop.Web.Factories
                         }
                         else
                         {
-                            decimal shoppingCartUnitPriceWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetUnitPrice(sci), out decimal _);
-                            decimal shoppingCartUnitPriceWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartUnitPriceWithDiscountBase, _workContext.WorkingCurrency);
+                            var shoppingCartUnitPriceWithDiscountBase = _taxService.GetProductPrice(sci.Product, _priceCalculationService.GetUnitPrice(sci), out decimal _);
+                            var shoppingCartUnitPriceWithDiscount = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartUnitPriceWithDiscountBase, _workContext.WorkingCurrency);
                             cartItemModel.UnitPrice = _priceFormatter.FormatPrice(shoppingCartUnitPriceWithDiscount);
                         }
 
@@ -1041,33 +1052,35 @@ namespace Nop.Web.Factories
         /// <returns>Order totals model</returns>
         public virtual OrderTotalsModel PrepareOrderTotalsModel(IList<ShoppingCartItem> cart, bool isEditable)
         {
-            var model = new OrderTotalsModel();
-            model.IsEditable = isEditable;
+            var model = new OrderTotalsModel
+            {
+                IsEditable = isEditable
+            };
 
             if (cart.Any())
             {
                 //subtotal
                 var subTotalIncludingTax = _workContext.TaxDisplayType == TaxDisplayType.IncludingTax && !_taxSettings.ForceTaxExclusionFromOrderSubtotal;
                 _orderTotalCalculationService.GetShoppingCartSubTotal(cart, subTotalIncludingTax, out decimal orderSubTotalDiscountAmountBase, out List<DiscountForCaching> _, out decimal subTotalWithoutDiscountBase, out decimal _);
-                decimal subtotalBase = subTotalWithoutDiscountBase;
-                decimal subtotal = _currencyService.ConvertFromPrimaryStoreCurrency(subtotalBase, _workContext.WorkingCurrency);
+                var subtotalBase = subTotalWithoutDiscountBase;
+                var subtotal = _currencyService.ConvertFromPrimaryStoreCurrency(subtotalBase, _workContext.WorkingCurrency);
                 model.SubTotal = _priceFormatter.FormatPrice(subtotal, true, _workContext.WorkingCurrency, _workContext.WorkingLanguage, subTotalIncludingTax);
 
                 if (orderSubTotalDiscountAmountBase > decimal.Zero)
                 {
-                    decimal orderSubTotalDiscountAmount = _currencyService.ConvertFromPrimaryStoreCurrency(orderSubTotalDiscountAmountBase, _workContext.WorkingCurrency);
+                    var orderSubTotalDiscountAmount = _currencyService.ConvertFromPrimaryStoreCurrency(orderSubTotalDiscountAmountBase, _workContext.WorkingCurrency);
                     model.SubTotalDiscount = _priceFormatter.FormatPrice(-orderSubTotalDiscountAmount, true, _workContext.WorkingCurrency, _workContext.WorkingLanguage, subTotalIncludingTax);
                 }
 
 
                 //shipping info
-                model.RequiresShipping = cart.RequiresShipping();
+                model.RequiresShipping = cart.RequiresShipping(_productService, _productAttributeParser);
                 if (model.RequiresShipping)
                 {
-                    decimal? shoppingCartShippingBase = _orderTotalCalculationService.GetShoppingCartShippingTotal(cart);
+                    var shoppingCartShippingBase = _orderTotalCalculationService.GetShoppingCartShippingTotal(cart);
                     if (shoppingCartShippingBase.HasValue)
                     {
-                        decimal shoppingCartShipping = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartShippingBase.Value, _workContext.WorkingCurrency);
+                        var shoppingCartShipping = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartShippingBase.Value, _workContext.WorkingCurrency);
                         model.Shipping = _priceFormatter.FormatShippingPrice(shoppingCartShipping, true);
 
                         //selected shipping method
@@ -1083,17 +1096,17 @@ namespace Nop.Web.Factories
 
                 //payment method fee
                 var paymentMethodSystemName = _workContext.CurrentCustomer.GetAttribute<string>(SystemCustomerAttributeNames.SelectedPaymentMethod, _storeContext.CurrentStore.Id);
-                decimal paymentMethodAdditionalFee = _paymentService.GetAdditionalHandlingFee(cart, paymentMethodSystemName);
-                decimal paymentMethodAdditionalFeeWithTaxBase = _taxService.GetPaymentMethodAdditionalFee(paymentMethodAdditionalFee, _workContext.CurrentCustomer);
+                var paymentMethodAdditionalFee = _paymentService.GetAdditionalHandlingFee(cart, paymentMethodSystemName);
+                var paymentMethodAdditionalFeeWithTaxBase = _taxService.GetPaymentMethodAdditionalFee(paymentMethodAdditionalFee, _workContext.CurrentCustomer);
                 if (paymentMethodAdditionalFeeWithTaxBase > decimal.Zero)
                 {
-                    decimal paymentMethodAdditionalFeeWithTax = _currencyService.ConvertFromPrimaryStoreCurrency(paymentMethodAdditionalFeeWithTaxBase, _workContext.WorkingCurrency);
+                    var paymentMethodAdditionalFeeWithTax = _currencyService.ConvertFromPrimaryStoreCurrency(paymentMethodAdditionalFeeWithTaxBase, _workContext.WorkingCurrency);
                     model.PaymentMethodAdditionalFee = _priceFormatter.FormatPaymentMethodAdditionalFee(paymentMethodAdditionalFeeWithTax, true);
                 }
 
                 //tax
-                bool displayTax = true;
-                bool displayTaxRates = true;
+                var displayTax = true;
+                var displayTaxRates = true;
                 if (_taxSettings.HideTaxInOrderSummary && _workContext.TaxDisplayType == TaxDisplayType.IncludingTax)
                 {
                     displayTax = false;
@@ -1101,8 +1114,8 @@ namespace Nop.Web.Factories
                 }
                 else
                 {
-                    decimal shoppingCartTaxBase = _orderTotalCalculationService.GetTaxTotal(cart, out SortedDictionary<decimal, decimal> taxRates);
-                    decimal shoppingCartTax = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartTaxBase, _workContext.WorkingCurrency);
+                    var shoppingCartTaxBase = _orderTotalCalculationService.GetTaxTotal(cart, out SortedDictionary<decimal, decimal> taxRates);
+                    var shoppingCartTax = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartTaxBase, _workContext.WorkingCurrency);
 
                     if (shoppingCartTaxBase == 0 && _taxSettings.HideZeroTax)
                     {
@@ -1129,17 +1142,17 @@ namespace Nop.Web.Factories
                 model.DisplayTax = displayTax;
 
                 //total
-                decimal? shoppingCartTotalBase = _orderTotalCalculationService.GetShoppingCartTotal(cart, out decimal orderTotalDiscountAmountBase, out List<DiscountForCaching> _, out List<AppliedGiftCard> appliedGiftCards, out int redeemedRewardPoints, out decimal redeemedRewardPointsAmount);
+                var shoppingCartTotalBase = _orderTotalCalculationService.GetShoppingCartTotal(cart, out decimal orderTotalDiscountAmountBase, out List<DiscountForCaching> _, out List<AppliedGiftCard> appliedGiftCards, out int redeemedRewardPoints, out decimal redeemedRewardPointsAmount);
                 if (shoppingCartTotalBase.HasValue)
                 {
-                    decimal shoppingCartTotal = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartTotalBase.Value, _workContext.WorkingCurrency);
+                    var shoppingCartTotal = _currencyService.ConvertFromPrimaryStoreCurrency(shoppingCartTotalBase.Value, _workContext.WorkingCurrency);
                     model.OrderTotal = _priceFormatter.FormatPrice(shoppingCartTotal, true, false);
                 }
 
                 //discount
                 if (orderTotalDiscountAmountBase > decimal.Zero)
                 {
-                    decimal orderTotalDiscountAmount = _currencyService.ConvertFromPrimaryStoreCurrency(orderTotalDiscountAmountBase, _workContext.WorkingCurrency);
+                    var orderTotalDiscountAmount = _currencyService.ConvertFromPrimaryStoreCurrency(orderTotalDiscountAmountBase, _workContext.WorkingCurrency);
                     model.OrderTotalDiscount = _priceFormatter.FormatPrice(-orderTotalDiscountAmount, true, false);
                 }
 
@@ -1153,11 +1166,11 @@ namespace Nop.Web.Factories
                             Id = appliedGiftCard.GiftCard.Id,
                             CouponCode = appliedGiftCard.GiftCard.GiftCardCouponCode,
                         };
-                        decimal amountCanBeUsed = _currencyService.ConvertFromPrimaryStoreCurrency(appliedGiftCard.AmountCanBeUsed, _workContext.WorkingCurrency);
+                        var amountCanBeUsed = _currencyService.ConvertFromPrimaryStoreCurrency(appliedGiftCard.AmountCanBeUsed, _workContext.WorkingCurrency);
                         gcModel.Amount = _priceFormatter.FormatPrice(-amountCanBeUsed, true, false);
 
-                        decimal remainingAmountBase = appliedGiftCard.GiftCard.GetGiftCardRemainingAmount() - appliedGiftCard.AmountCanBeUsed;
-                        decimal remainingAmount = _currencyService.ConvertFromPrimaryStoreCurrency(remainingAmountBase, _workContext.WorkingCurrency);
+                        var remainingAmountBase = appliedGiftCard.GiftCard.GetGiftCardRemainingAmount() - appliedGiftCard.AmountCanBeUsed;
+                        var remainingAmount = _currencyService.ConvertFromPrimaryStoreCurrency(remainingAmountBase, _workContext.WorkingCurrency);
                         gcModel.Remaining = _priceFormatter.FormatPrice(remainingAmount, true, false);
 
                         model.GiftCards.Add(gcModel);
@@ -1167,24 +1180,22 @@ namespace Nop.Web.Factories
                 //reward points to be spent (redeemed)
                 if (redeemedRewardPointsAmount > decimal.Zero)
                 {
-                    decimal redeemedRewardPointsAmountInCustomerCurrency = _currencyService.ConvertFromPrimaryStoreCurrency(redeemedRewardPointsAmount, _workContext.WorkingCurrency);
+                    var redeemedRewardPointsAmountInCustomerCurrency = _currencyService.ConvertFromPrimaryStoreCurrency(redeemedRewardPointsAmount, _workContext.WorkingCurrency);
                     model.RedeemedRewardPoints = redeemedRewardPoints;
                     model.RedeemedRewardPointsAmount = _priceFormatter.FormatPrice(-redeemedRewardPointsAmountInCustomerCurrency, true, false);
                 }
 
                 //reward points to be earned
-                if (_rewardPointsSettings.Enabled &&
-                    _rewardPointsSettings.DisplayHowMuchWillBeEarned &&
-                    shoppingCartTotalBase.HasValue)
+                if (_rewardPointsSettings.Enabled && _rewardPointsSettings.DisplayHowMuchWillBeEarned && shoppingCartTotalBase.HasValue)
                 {
-                    decimal? shippingBaseInclTax = model.RequiresShipping
-                        ? _orderTotalCalculationService.GetShoppingCartShippingTotal(cart, true)
-                        : 0;
-                    if (shippingBaseInclTax.HasValue)
-                    {
-                        var totalForRewardPoints = _orderTotalCalculationService.CalculateApplicableOrderTotalForRewardPoints(shippingBaseInclTax.Value, shoppingCartTotalBase.Value);
+                    //get shipping total
+                    var shippingBaseInclTax = !model.RequiresShipping ? 0 : _orderTotalCalculationService.GetShoppingCartShippingTotal(cart, true) ?? 0;
+
+                    //get total for reward points
+                    var totalForRewardPoints = _orderTotalCalculationService
+                        .CalculateApplicableOrderTotalForRewardPoints(shippingBaseInclTax, shoppingCartTotalBase.Value);
+                    if (totalForRewardPoints > decimal.Zero)
                         model.WillEarnRewardPoints = _orderTotalCalculationService.CalculateRewardPoints(_workContext.CurrentCustomer, totalForRewardPoints);
-                    }
                 }
 
             }
@@ -1204,7 +1215,7 @@ namespace Nop.Web.Factories
         {
             var model = new EstimateShippingResultModel();
 
-            if (cart.RequiresShipping())
+            if (cart.RequiresShipping(_productService, _productAttributeParser))
             {
                 var address = new Address
                 {
@@ -1214,27 +1225,26 @@ namespace Nop.Web.Factories
                     StateProvince = stateProvinceId.HasValue ? _stateProvinceService.GetStateProvinceById(stateProvinceId.Value) : null,
                     ZipPostalCode = zipPostalCode,
                 };
-                GetShippingOptionResponse getShippingOptionResponse = _shippingService
-                    .GetShippingOptions(cart, address, _workContext.CurrentCustomer, storeId: _storeContext.CurrentStore.Id);
+
+                var getShippingOptionResponse = _shippingService.GetShippingOptions(cart, address, _workContext.CurrentCustomer, storeId: _storeContext.CurrentStore.Id);
                 if (getShippingOptionResponse.Success)
                 {
                     if (getShippingOptionResponse.ShippingOptions.Any())
                     {
                         foreach (var shippingOption in getShippingOptionResponse.ShippingOptions)
                         {
-                            var soModel = new EstimateShippingResultModel.ShippingOptionModel
+                            //calculate discounted and taxed rate
+                            var shippingRate = _orderTotalCalculationService.AdjustShippingRate(shippingOption.Rate, cart, out List<DiscountForCaching> _);
+                            shippingRate = _taxService.GetShippingPrice(shippingRate, _workContext.CurrentCustomer);
+                            shippingRate = _currencyService.ConvertFromPrimaryStoreCurrency(shippingRate, _workContext.WorkingCurrency);
+                            var shippingRateString = _priceFormatter.FormatShippingPrice(shippingRate, true);
+
+                            model.ShippingOptions.Add(new EstimateShippingResultModel.ShippingOptionModel
                             {
                                 Name = shippingOption.Name,
                                 Description = shippingOption.Description,
-
-                            };
-                            //calculate discounted and taxed rate
-                            decimal shippingTotal = _orderTotalCalculationService.AdjustShippingRate(shippingOption.Rate, cart, out List<DiscountForCaching> _);
-
-                            decimal rateBase = _taxService.GetShippingPrice(shippingTotal, _workContext.CurrentCustomer);
-                            decimal rate = _currencyService.ConvertFromPrimaryStoreCurrency(rateBase, _workContext.WorkingCurrency);
-                            soModel.Price = _priceFormatter.FormatShippingPrice(rate, true);
-                            model.ShippingOptions.Add(soModel);
+                                Price = shippingRateString
+                            });
                         }
                     }
                 }

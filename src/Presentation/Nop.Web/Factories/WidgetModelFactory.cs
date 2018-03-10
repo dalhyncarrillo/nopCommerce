@@ -55,9 +55,10 @@ namespace Nop.Web.Factories
                 _workContext.CurrentCustomer.Id, _storeContext.CurrentStore.Id, widgetZone, _themeContext.WorkingThemeName);
 
             //add widget zone to view component arguments
-            additionalData = new RouteValueDictionary(additionalData)
+            var componentArguments = new RouteValueDictionary
             {
-                { "widgetZone", widgetZone }
+                { "widgetZone", widgetZone },
+                { "additionalData", additionalData }
             };
 
             var cachedModel = _cacheManager.Get(cacheKey, () =>
@@ -68,15 +69,11 @@ namespace Nop.Web.Factories
                 var widgets = _widgetService.LoadActiveWidgetsByWidgetZone(widgetZone, _workContext.CurrentCustomer, _storeContext.CurrentStore.Id);
                 foreach (var widget in widgets)
                 {
-                    widget.GetPublicViewComponent(widgetZone, out string viewComponentName);
-
-                    var widgetModel = new RenderWidgetModel
+                    model.Add(new RenderWidgetModel
                     {
-                        WidgetViewComponentName = viewComponentName,
-                        WidgetViewComponentArguments = additionalData
-                    };
-
-                    model.Add(widgetModel);
+                        WidgetViewComponentName = widget.GetWidgetViewComponentName(widgetZone),
+                        WidgetViewComponentArguments = componentArguments
+                    });
                 }
                 return model;
             });
@@ -95,13 +92,8 @@ namespace Nop.Web.Factories
                 if (widgetModel.WidgetViewComponentArguments != null)
                     clonedWidgetModel.WidgetViewComponentArguments = new RouteValueDictionary(widgetModel.WidgetViewComponentArguments);
 
-                if (additionalData != null)
-                {
-                    if (clonedWidgetModel.WidgetViewComponentArguments == null)
-                        clonedWidgetModel.WidgetViewComponentArguments = new RouteValueDictionary();
-
-                    clonedWidgetModel.WidgetViewComponentArguments = additionalData;
-                }
+                if (clonedWidgetModel.WidgetViewComponentArguments == null)
+                    clonedWidgetModel.WidgetViewComponentArguments = componentArguments;
 
                 clonedModel.Add(clonedWidgetModel);
             }

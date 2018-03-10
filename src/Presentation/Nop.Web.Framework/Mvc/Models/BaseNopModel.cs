@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Nop.Web.Framework.Mvc.Models
@@ -10,6 +11,9 @@ namespace Nop.Web.Framework.Mvc.Models
     {
         #region Ctor
 
+        /// <summary>
+        /// Ctor
+        /// </summary>
         public BaseNopModel()
         {
             this.CustomProperties = new Dictionary<string, object>();
@@ -41,6 +45,9 @@ namespace Nop.Web.Framework.Mvc.Models
 
         #region Properties
 
+        //MVC is suppressing further validation if the IFormCollection is passed to a controller method. That's why we add it to the model
+        public IFormCollection Form { get; set; }
+
         /// <summary>
         /// Gets or sets property to store any custom values for models 
         /// </summary>
@@ -48,16 +55,5 @@ namespace Nop.Web.Framework.Mvc.Models
 
         #endregion
 
-    }
-
-    /// <summary>
-    /// Represents base nopCommerce entity model
-    /// </summary>
-    public partial class BaseNopEntityModel : BaseNopModel
-    {
-        /// <summary>
-        /// Gets or sets model identifier
-        /// </summary>
-        public virtual int Id { get; set; }
     }
 }

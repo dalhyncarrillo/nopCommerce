@@ -14,6 +14,7 @@
     </h1>
     <div class="pull-right">
         &nbsp;
+        @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.MaintenanceButtons })
     </div>
 </div>
 
@@ -21,6 +22,7 @@
     <div class="content">
         <div class="form-horizontal">
             <div class="panel-group">
+                @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.MaintenanceTop })
                 <div class="panel panel-default">
                     <div class="panel-body">
                         <div class="row">
@@ -174,7 +176,7 @@
                 </div>
                 <div id="backup-data" style="display: none"></div>
 
-                <script type="text/javascript">
+                <script>
                     function submitBackupAction(fileName, action) {
                         $("#backup-data").children().remove();
                         $("#backup-data").append('<input type="hidden" name="backupFileName" value="' + fileName + '"/>');
@@ -267,6 +269,7 @@
                         });
                     });
                 </script>
+                @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.MaintenanceBottom })
             </div>
         </div>
     </div>

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Nop.Web.Areas.Admin.Extensions;
@@ -72,24 +71,24 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var localized in model.Locales)
             {
                 _localizedEntityService.SaveLocalizedValue(mt,
-                                                           x => x.BccEmailAddresses,
-                                                           localized.BccEmailAddresses,
-                                                           localized.LanguageId);
+                    x => x.BccEmailAddresses,
+                    localized.BccEmailAddresses,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(mt,
-                                                           x => x.Subject,
-                                                           localized.Subject,
-                                                           localized.LanguageId);
+                    x => x.Subject,
+                    localized.Subject,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(mt,
-                                                           x => x.Body,
-                                                           localized.Body,
-                                                           localized.LanguageId);
+                    x => x.Body,
+                    localized.Body,
+                    localized.LanguageId);
 
-               _localizedEntityService.SaveLocalizedValue(mt,
-                                                            x => x.EmailAccountId,
-                                                            localized.EmailAccountId,
-                                                            localized.LanguageId);
+                _localizedEntityService.SaveLocalizedValue(mt,
+                    x => x.EmailAccountId,
+                    localized.EmailAccountId,
+                    localized.LanguageId);
             }
         }
         
@@ -177,7 +176,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                             .GetAllStores()
                             .Where(s => !x.LimitedToStores || templateModel.SelectedStoreIds.Contains(s.Id))
                             .ToList();
-                    for (int i = 0; i < stores.Count; i++)
+                    for (var i = 0; i < stores.Count; i++)
                     {
                         templateModel.ListOfStores += stores[i].Name;
                         if (i != stores.Count - 1)
@@ -265,7 +264,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _messageTemplateService.UpdateMessageTemplate(messageTemplate);
 
                 //activity log
-                _customerActivityService.InsertActivity("EditMessageTemplate", _localizationService.GetResource("ActivityLog.EditMessageTemplate"), messageTemplate.Id);
+                _customerActivityService.InsertActivity("EditMessageTemplate",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditMessageTemplate"), messageTemplate.Id), messageTemplate);
 
                 //stores
                 SaveStoreMappings(messageTemplate, model);
@@ -328,7 +328,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _messageTemplateService.DeleteMessageTemplate(messageTemplate);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteMessageTemplate", _localizationService.GetResource("ActivityLog.DeleteMessageTemplate"), messageTemplate.Id);
+            _customerActivityService.InsertActivity("DeleteMessageTemplate",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteMessageTemplate"), messageTemplate.Id), messageTemplate);
 
             SuccessNotification(_localizationService.GetResource("Admin.ContentManagement.MessageTemplates.Deleted"));
             return RedirectToAction("List");
@@ -401,7 +402,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 if (formKey.StartsWith("token_", StringComparison.InvariantCultureIgnoreCase))
                 {
                     var tokenKey = formKey.Substring("token_".Length).Replace("%", "");
-                    var stringValue = form[formKey];
+                    var stringValue = form[formKey].ToString();
 
                     //try get non-string value
                     object tokenValue;

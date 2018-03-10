@@ -4,10 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Nop.Services.Cms;
 using Nop.Web.Areas.Admin.Models.Cms;
+using Nop.Web.Framework.Components;
 
 namespace Nop.Web.Areas.Admin.Components
 {
-    public class AdminWidgetViewComponent : ViewComponent
+    public class AdminWidgetViewComponent : NopViewComponent
     {
         private readonly IWidgetService _widgetService;
 
@@ -21,23 +22,20 @@ namespace Nop.Web.Areas.Admin.Components
             var model = new List<RenderWidgetModel>();
 
             //add widget zone to view component arguments
-            additionalData = new RouteValueDictionary(additionalData)
+            additionalData = new RouteValueDictionary()
             {
-                { "widgetZone", widgetZone }
+                { "widgetZone", widgetZone },
+                { "additionalData", additionalData }
             };
 
             var widgets = _widgetService.LoadActiveWidgetsByWidgetZone(widgetZone);
             foreach (var widget in widgets)
             {
-                widget.GetPublicViewComponent(widgetZone, out string viewComponentName);
-
-                var widgetModel = new RenderWidgetModel
+                model.Add(new RenderWidgetModel
                 {
-                    WidgetViewComponentName = viewComponentName,
+                    WidgetViewComponentName = widget.GetWidgetViewComponentName(widgetZone),
                     WidgetViewComponentArguments = additionalData
-                };
-
-                model.Add(widgetModel);
+                });
             }
 
             //no data?

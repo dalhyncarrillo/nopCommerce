@@ -21,6 +21,15 @@ namespace Nop.Services.Orders
             bool ensureOnlyActiveCheckoutAttributes = false);
 
         /// <summary>
+        /// Delete shopping cart item
+        /// </summary>
+        /// <param name="shoppingCartItemId">Shopping cart item ID</param>
+        /// <param name="resetCheckoutData">A value indicating whether to reset checkout data</param>
+        /// <param name="ensureOnlyActiveCheckoutAttributes">A value indicating whether to ensure that only active checkout attributes are attached to the current customer</param>
+        void DeleteShoppingCartItem(int shoppingCartItemId, bool resetCheckoutData = true,
+            bool ensureOnlyActiveCheckoutAttributes = false);
+
+        /// <summary>
         /// Deletes expired shopping cart items
         /// </summary>
         /// <param name="olderThanUtc">Older than date and time</param>
@@ -147,7 +156,6 @@ namespace Nop.Services.Orders
             decimal customerEnteredPrice = decimal.Zero,
             DateTime? rentalStartDate = null,
             DateTime? rentalEndDate = null);
-
 
         /// <summary>
         /// Add a product to shopping cart

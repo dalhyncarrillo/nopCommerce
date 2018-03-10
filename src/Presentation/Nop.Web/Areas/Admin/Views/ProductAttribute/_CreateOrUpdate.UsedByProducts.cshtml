@@ -1,4 +1,4 @@
-﻿@model ProductAttributeModel
+@model ProductAttributeModel
 @inject AdminAreaSettings adminAreaSettings
 
 @{
@@ -7,6 +7,7 @@
 }
 
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductAttributeDetailsUsedByProductsTop, additionalData = Model })
     <div class="panel panel-default">
         <div class="panel-body">
             <p>
@@ -77,4 +78,5 @@
             </script>
         </div>
     </div>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductAttributeDetailsUsedByProductsBottom, additionalData = Model })
 </div>

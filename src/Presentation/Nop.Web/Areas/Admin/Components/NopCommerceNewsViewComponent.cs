@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Net;
 using System.Xml;
 using Microsoft.AspNetCore.Mvc;
@@ -9,17 +8,24 @@ using Nop.Core.Domain.Common;
 using Nop.Services.Configuration;
 using Nop.Web.Areas.Admin.Infrastructure.Cache;
 using Nop.Web.Areas.Admin.Models.Home;
+using Nop.Web.Framework.Components;
 using Nop.Web.Framework.Mvc.Rss;
 
 namespace Nop.Web.Areas.Admin.Components
 {
-    public class NopCommerceNewsViewComponent : ViewComponent
+    public class NopCommerceNewsViewComponent : NopViewComponent
     {
+        #region Fields
+
         private readonly AdminAreaSettings _adminAreaSettings;
         private readonly IStoreContext _storeContext;
         private readonly IStaticCacheManager _cacheManager;
         private readonly ISettingService _settingService;
         private readonly IWebHelper _webHelper;
+
+        #endregion
+
+        #region Ctor
 
         public NopCommerceNewsViewComponent(IStoreContext storeContext,
             AdminAreaSettings adminAreaSettings,
@@ -34,18 +40,16 @@ namespace Nop.Web.Areas.Admin.Components
             this._webHelper = webHelper;
         }
 
+        #endregion
+
+        #region Methods
+
         public IViewComponentResult Invoke()
         {
             try
             {
-                string feedUrl = string
-                    .Format(
-                        "http://www.nopCommerce.com/NewsRSS.aspx?Version={0}&Localhost={1}&HideAdvertisements={2}&StoreURL={3}",
-                        NopVersion.CurrentVersion,
-                        _webHelper.IsLocalRequest(Request),
-                        _adminAreaSettings.HideAdvertisementsOnAdminArea,
-                        _storeContext.CurrentStore.Url)
-                    .ToLowerInvariant();
+                var feedUrl = $"https://www.nopCommerce.com/NewsRSS.aspx?Version={NopVersion.CurrentVersion}&Localhost={_webHelper.IsLocalRequest(Request)}&HideAdvertisements={_adminAreaSettings.HideAdvertisementsOnAdminArea}&StoreURL={_webHelper.GetStoreLocation()}"
+                        .ToLowerInvariant();
 
                 var rssData = _cacheManager.Get(ModelCacheEventConsumer.OFFICIAL_NEWS_MODEL_KEY, () =>
                 {
@@ -64,7 +68,7 @@ namespace Nop.Web.Areas.Admin.Components
                     HideAdvertisements = _adminAreaSettings.HideAdvertisementsOnAdminArea
                 };
 
-                for (int i = 0; i < rssData.Items.Count; i++)
+                for (var i = 0; i < rssData.Items.Count; i++)
                 {
                     var item = rssData.Items.ElementAt(i);
                     var newsItem = new NopCommerceNewsModel.NewsDetailsModel
@@ -79,7 +83,7 @@ namespace Nop.Web.Areas.Admin.Components
                     //has new items?
                     if (i == 0)
                     {
-                        var firstRequest = String.IsNullOrEmpty(_adminAreaSettings.LastNewsTitleAdminArea);
+                        var firstRequest = string.IsNullOrEmpty(_adminAreaSettings.LastNewsTitleAdminArea);
                         if (_adminAreaSettings.LastNewsTitleAdminArea != newsItem.Title)
                         {
                             _adminAreaSettings.LastNewsTitleAdminArea = newsItem.Title;
@@ -100,5 +104,7 @@ namespace Nop.Web.Areas.Admin.Components
                 return Content("");
             }
         }
+
+        #endregion
     }
 }

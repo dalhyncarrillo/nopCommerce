@@ -5,9 +5,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Primitives;
-using Nop.Web.Areas.Admin.Extensions;
-using Nop.Web.Areas.Admin.Models.Directory;
-using Nop.Web.Areas.Admin.Models.Shipping;
 using Nop.Core;
 using Nop.Core.Domain.Directory;
 using Nop.Core.Domain.Shipping;
@@ -17,9 +14,13 @@ using Nop.Services.Configuration;
 using Nop.Services.Directory;
 using Nop.Services.Localization;
 using Nop.Services.Logging;
+using Nop.Services.Plugins;
 using Nop.Services.Security;
 using Nop.Services.Shipping;
 using Nop.Services.Shipping.Date;
+using Nop.Web.Areas.Admin.Extensions;
+using Nop.Web.Areas.Admin.Models.Directory;
+using Nop.Web.Areas.Admin.Models.Shipping;
 using Nop.Web.Framework.Kendoui;
 using Nop.Web.Framework.Mvc;
 using Nop.Web.Framework.Mvc.Filters;
@@ -28,8 +29,8 @@ namespace Nop.Web.Areas.Admin.Controllers
 {
     public partial class ShippingController : BaseAdminController
 	{
-		#region Fields
-
+        #region Fields
+        
         private readonly IShippingService _shippingService;
         private readonly ShippingSettings _shippingSettings;
         private readonly ISettingService _settingService;
@@ -175,9 +176,12 @@ namespace Nop.Web.Areas.Admin.Controllers
             var pluginDescriptor = srcm.PluginDescriptor;
             //display order
             pluginDescriptor.DisplayOrder = model.DisplayOrder;
-            PluginFileParser.SavePluginDescriptionFile(pluginDescriptor);
+
+            //update the description file
+            PluginManager.SavePluginDescriptor(pluginDescriptor);
+
             //reset plugin cache
-            _pluginFinder.ReloadPlugins();
+            _pluginFinder.ReloadPlugins(pluginDescriptor);
 
             return new NullJsonResult();
         }
@@ -247,9 +251,12 @@ namespace Nop.Web.Areas.Admin.Controllers
             }
             var pluginDescriptor = pickupPointProvider.PluginDescriptor;
             pluginDescriptor.DisplayOrder = model.DisplayOrder;
-            PluginFileParser.SavePluginDescriptionFile(pluginDescriptor);
+
+            //update the description file
+            PluginManager.SavePluginDescriptor(pluginDescriptor);
+
             //reset plugin cache
-            _pluginFinder.ReloadPlugins();
+            _pluginFinder.ReloadPlugins(pluginDescriptor);
 
             return new NullJsonResult();
         }
@@ -283,7 +290,6 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             return Json(gridModel);
         }
-
 
         public virtual IActionResult CreateMethod()
         {
@@ -413,7 +419,6 @@ namespace Nop.Web.Areas.Admin.Controllers
             return Json(gridModel);
         }
 
-
         public virtual IActionResult CreateDeliveryDate()
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageShippingSettings))
@@ -517,7 +522,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             return RedirectToAction("DatesAndRanges");
         }
 
-#endregion
+        #endregion
         
         #region Product availability ranges
 
@@ -640,7 +645,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             return RedirectToAction("DatesAndRanges");
         }
 
-#endregion
+        #endregion
         
         #region Warehouses
 
@@ -660,15 +665,15 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             var warehousesModel = _shippingService.GetAllWarehouses()
                 .Select(x =>
-                            {
-                                var warehouseModel = new WarehouseModel
-                                {
-                                    Id = x.Id,
-                                    Name = x.Name
-                                    //ignore address for list view (performance optimization)
-                                };
-                                return warehouseModel;
-                            })
+                {
+                    var warehouseModel = new WarehouseModel
+                    {
+                        Id = x.Id,
+                        Name = x.Name
+                        //ignore address for list view (performance optimization)
+                    };
+                    return warehouseModel;
+                })
                 .ToList();
             var gridModel = new DataSourceResult
             {
@@ -693,6 +698,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             model.Address.CountryEnabled = true;
             model.Address.CountryRequired = true;
             model.Address.StateProvinceEnabled = true;
+            model.Address.CountyEnabled = true;
             model.Address.CityEnabled = true;
             model.Address.StreetAddressEnabled = true;
             model.Address.ZipPostalCodeEnabled = true;
@@ -722,7 +728,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _shippingService.InsertWarehouse(warehouse);
                 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewWarehouse", _localizationService.GetResource("ActivityLog.AddNewWarehouse"), warehouse.Id);
+                _customerActivityService.InsertActivity("AddNewWarehouse",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewWarehouse"), warehouse.Id), warehouse);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Configuration.Shipping.Warehouses.Added"));
                 return continueEditing ? RedirectToAction("EditWarehouse", new { id = warehouse.Id }) : RedirectToAction("Warehouses");
@@ -784,6 +791,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             model.Address.CountryEnabled = true;
             model.Address.CountryRequired = true;
             model.Address.StateProvinceEnabled = true;
+            model.Address.CountyEnabled = true;
             model.Address.CityEnabled = true;
             model.Address.StreetAddressEnabled = true;
             model.Address.ZipPostalCodeEnabled = true;
@@ -816,7 +824,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 else
                     _addressService.InsertAddress(address);
 
-
                 warehouse.Name = model.Name;
                 warehouse.AdminComment = model.AdminComment;
                 warehouse.AddressId = address.Id;
@@ -824,12 +831,12 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _shippingService.UpdateWarehouse(warehouse);
 
                 //activity log
-                _customerActivityService.InsertActivity("EditWarehouse", _localizationService.GetResource("ActivityLog.EditWarehouse"), warehouse.Id);
+                _customerActivityService.InsertActivity("EditWarehouse",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditWarehouse"), warehouse.Id), warehouse);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Configuration.Shipping.Warehouses.Updated"));
                 return continueEditing ? RedirectToAction("EditWarehouse", warehouse.Id) : RedirectToAction("Warehouses");
             }
-
 
             //If we got this far, something failed, redisplay form
 
@@ -864,13 +871,14 @@ namespace Nop.Web.Areas.Admin.Controllers
             _shippingService.DeleteWarehouse(warehouse);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteWarehouse", _localizationService.GetResource("ActivityLog.DeleteWarehouse"), warehouse.Id);
+            _customerActivityService.InsertActivity("DeleteWarehouse",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteWarehouse"), warehouse.Id), warehouse);
 
             SuccessNotification(_localizationService.GetResource("Admin.Configuration.Shipping.warehouses.Deleted"));
             return RedirectToAction("Warehouses");
         }
 
-#endregion
+        #endregion
         
         #region Restrictions
 
@@ -902,7 +910,7 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var country in countries)
                 foreach (var shippingMethod in shippingMethods)
                 {
-                    bool restricted = shippingMethod.CountryRestrictionExists(country.Id);
+                    var restricted = shippingMethod.CountryRestrictionExists(country.Id);
                     if (!model.Restricted.ContainsKey(country.Id))
                         model.Restricted[country.Id] = new Dictionary<int, bool>();
                     model.Restricted[country.Id][shippingMethod.Id] = restricted;
@@ -923,7 +931,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             foreach (var shippingMethod in shippingMethods)
             {
-                string formKey = "restrict_" + shippingMethod.Id;
+                var formKey = "restrict_" + shippingMethod.Id;
                 var countryIdsToRestrict = !StringValues.IsNullOrEmpty(form[formKey])
                     ? form[formKey].ToString().Split(new [] { ',' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(int.Parse)
@@ -933,7 +941,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 foreach (var country in countries)
                 {
 
-                    bool restrict = countryIdsToRestrict.Contains(country.Id);
+                    var restrict = countryIdsToRestrict.Contains(country.Id);
                     if (restrict)
                     {
                         if (shippingMethod.RestrictedCountries.FirstOrDefault(c => c.Id == country.Id) == null)

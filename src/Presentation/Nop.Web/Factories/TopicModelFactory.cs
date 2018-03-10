@@ -31,7 +31,7 @@ namespace Nop.Web.Factories
 
         #endregion
 
-        #region Constructors
+        #region Ctor
 
         public TopicModelFactory(ITopicService topicService,
             IWorkContext workContext,
@@ -133,11 +133,6 @@ namespace Nop.Web.Factories
                 //load by store
                 var topic = _topicService.GetTopicBySystemName(systemName, _storeContext.CurrentStore.Id);
                 if (topic == null)
-                    return null;
-                if (!topic.Published)
-                    return null;
-                //ACL (access control list)
-                if (!_aclService.Authorize(topic))
                     return null;
                 return PrepareTopicModel(topic);
             });

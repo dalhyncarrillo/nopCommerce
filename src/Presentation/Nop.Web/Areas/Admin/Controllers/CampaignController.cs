@@ -199,8 +199,10 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCampaigns))
                 return AccessDeniedView();
 
-            var model = new CampaignModel();
-            model.AllowedTokens = string.Join(", ", _messageTokenProvider.GetListOfCampaignAllowedTokens());
+            var model = new CampaignModel
+            {
+                AllowedTokens = string.Join(", ", _messageTokenProvider.GetListOfCampaignAllowedTokens())
+            };
             //stores
             PrepareStoresModel(model);
             //customer roles
@@ -227,7 +229,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _campaignService.InsertCampaign(campaign);
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewCampaign", _localizationService.GetResource("ActivityLog.AddNewCampaign"), campaign.Id);
+                _customerActivityService.InsertActivity("AddNewCampaign",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewCampaign"), campaign.Id), campaign);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Promotions.Campaigns.Added"));
                 return continueEditing ? RedirectToAction("Edit", new { id = campaign.Id }) : RedirectToAction("List");
@@ -291,7 +294,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _campaignService.UpdateCampaign(campaign);
 
                 //activity log
-                _customerActivityService.InsertActivity("EditCampaign", _localizationService.GetResource("ActivityLog.EditCampaign"), campaign.Id);
+                _customerActivityService.InsertActivity("EditCampaign",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditCampaign"), campaign.Id), campaign);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Promotions.Campaigns.Updated"));
                 return continueEditing ? RedirectToAction("Edit", new { id = campaign.Id }) : RedirectToAction("List");
@@ -422,7 +426,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _campaignService.DeleteCampaign(campaign);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteCampaign", _localizationService.GetResource("ActivityLog.DeleteCampaign"), campaign.Id);
+            _customerActivityService.InsertActivity("DeleteCampaign",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteCampaign"), campaign.Id), campaign);
 
             SuccessNotification(_localizationService.GetResource("Admin.Promotions.Campaigns.Deleted"));
 

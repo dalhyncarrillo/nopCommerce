@@ -200,7 +200,7 @@ namespace Nop.Services.Customers
                 result.AddError("Current customer is already registered");
                 return result;
             }
-            if (String.IsNullOrEmpty(request.Email))
+            if (string.IsNullOrEmpty(request.Email))
             {
                 result.AddError(_localizationService.GetResource("Account.Register.Errors.EmailIsNotProvided"));
                 return result;
@@ -210,14 +210,14 @@ namespace Nop.Services.Customers
                 result.AddError(_localizationService.GetResource("Common.WrongEmail"));
                 return result;
             }
-            if (String.IsNullOrWhiteSpace(request.Password))
+            if (string.IsNullOrWhiteSpace(request.Password))
             {
                 result.AddError(_localizationService.GetResource("Account.Register.Errors.PasswordIsNotProvided"));
                 return result;
             }
             if (_customerSettings.UsernamesEnabled)
             {
-                if (String.IsNullOrEmpty(request.Username))
+                if (string.IsNullOrEmpty(request.Username))
                 {
                     result.AddError(_localizationService.GetResource("Account.Register.Errors.UsernameIsNotProvided"));
                     return result;
@@ -279,20 +279,16 @@ namespace Nop.Services.Customers
             if (guestRole != null)
                 request.Customer.CustomerRoles.Remove(guestRole);
             
-            //Add reward points for customer registration (if enabled)
-            if (_rewardPointsSettings.Enabled &&
-                _rewardPointsSettings.PointsForRegistration > 0)
+            //add reward points for customer registration (if enabled)
+            if (_rewardPointsSettings.Enabled && _rewardPointsSettings.PointsForRegistration > 0)
             {
-                _rewardPointService.AddRewardPointsHistoryEntry(request.Customer, 
-                    _rewardPointsSettings.PointsForRegistration,
-                    request.StoreId,
-                    _localizationService.GetResource("RewardPoints.Message.EarnedForRegistration"));
+                var endDate = _rewardPointsSettings.RegistrationPointsValidity > 0 
+                    ? (DateTime?)DateTime.UtcNow.AddDays(_rewardPointsSettings.RegistrationPointsValidity.Value) : null;
+                _rewardPointService.AddRewardPointsHistoryEntry(request.Customer, _rewardPointsSettings.PointsForRegistration,
+                    request.StoreId, _localizationService.GetResource("RewardPoints.Message.EarnedForRegistration"), endDate: endDate);
             }
 
             _customerService.UpdateCustomer(request.Customer);
-
-            //publish event
-            _eventPublisher.Publish(new CustomerPasswordChangedEvent(customerPassword));
 
             return result;
         }
@@ -308,12 +304,12 @@ namespace Nop.Services.Customers
                 throw new ArgumentNullException(nameof(request));
 
             var result = new ChangePasswordResult();
-            if (String.IsNullOrWhiteSpace(request.Email))
+            if (string.IsNullOrWhiteSpace(request.Email))
             {
                 result.AddError(_localizationService.GetResource("Account.ChangePassword.Errors.EmailIsNotProvided"));
                 return result;
             }
-            if (String.IsNullOrWhiteSpace(request.NewPassword))
+            if (string.IsNullOrWhiteSpace(request.NewPassword))
             {
                 result.AddError(_localizationService.GetResource("Account.ChangePassword.Errors.PasswordIsNotProvided"));
                 return result;
@@ -396,7 +392,7 @@ namespace Nop.Services.Customers
                 throw new NopException("Email cannot be null");
 
             newEmail = newEmail.Trim();
-            string oldEmail = customer.Email;
+            var oldEmail = customer.Email;
 
             if (!CommonHelper.IsValidEmail(newEmail))
                 throw new NopException(_localizationService.GetResource("Account.EmailUsernameErrors.NewEmailIsNotValid"));
@@ -424,7 +420,7 @@ namespace Nop.Services.Customers
                 _customerService.UpdateCustomer(customer);
 
                 //update newsletter subscription (if required)
-                if (!String.IsNullOrEmpty(oldEmail) && !oldEmail.Equals(newEmail, StringComparison.InvariantCultureIgnoreCase))
+                if (!string.IsNullOrEmpty(oldEmail) && !oldEmail.Equals(newEmail, StringComparison.InvariantCultureIgnoreCase))
                 {
                     foreach (var store in _storeService.GetAllStores())
                     {

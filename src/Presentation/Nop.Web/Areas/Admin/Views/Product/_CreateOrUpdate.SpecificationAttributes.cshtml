@@ -6,6 +6,7 @@
     <p>
         @T("Admin.Catalog.Products.SpecificationAttributes.Hint")
     </p>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsSpecificationAttributesTop, additionalData = Model })
     @if (Model.Id > 0)
     {
         /*hide "add spec" table if no attributes are defined*/
@@ -173,7 +174,7 @@
                     @T("Admin.Catalog.Products.SpecificationAttributes.AddNew")
                 </div>
                 <div class="panel-body">
-                    <script type="text/javascript">
+                    <script>
                         $(document).ready(function() {
                             $("#@Html.IdFor(model => model.AddSpecificationAttributeModel.SpecificationAttributeId)").change(function() {
                                 var selectedAttributeId = $(this).val();
@@ -209,10 +210,10 @@
                                     //some validation
                                     if (attributeTypeId == @(((int) SpecificationAttributeType.Option).ToString())) {
                                         //option
-                                        alert('Select specification attribute option');
+                                        alert('@T("Admin.Catalog.Products.SpecificationAttributes.SelectOption")');
                                 } else {
                                     //other (text, hyperlink, etc)
-                                    alert('First, please create at least one specification attribute option');
+                                    alert('@T("Admin.Catalog.Products.SpecificationAttributes.NoAttributeOptions")');
                                 }
                             } else {
                                     $('#addProductSpec').attr('disabled', true);
@@ -363,4 +364,5 @@
             </div>
         </div>
     }
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductDetailsSpecificationAttributesBottom, additionalData = Model })
 </div>

@@ -44,7 +44,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
         #endregion
 
-        #region Constructors
+        #region Ctor
 
         public CustomerRoleController(ICustomerService customerService,
             ILocalizationService localizationService, 
@@ -152,7 +152,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _customerService.InsertCustomerRole(customerRole);
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewCustomerRole", _localizationService.GetResource("ActivityLog.AddNewCustomerRole"), customerRole.Name);
+                _customerActivityService.InsertActivity("AddNewCustomerRole",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewCustomerRole"), customerRole.Name), customerRole);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Customers.CustomerRoles.Added"));
                 return continueEditing ? RedirectToAction("Edit", new { id = customerRole.Id }) : RedirectToAction("List");
@@ -207,7 +208,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                     _customerService.UpdateCustomerRole(customerRole);
 
                     //activity log
-                    _customerActivityService.InsertActivity("EditCustomerRole", _localizationService.GetResource("ActivityLog.EditCustomerRole"), customerRole.Name);
+                    _customerActivityService.InsertActivity("EditCustomerRole",
+                        string.Format(_localizationService.GetResource("ActivityLog.EditCustomerRole"), customerRole.Name), customerRole);
 
                     SuccessNotification(_localizationService.GetResource("Admin.Customers.CustomerRoles.Updated"));
                     return continueEditing ? RedirectToAction("Edit", new { id = customerRole.Id}) : RedirectToAction("List");
@@ -240,7 +242,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _customerService.DeleteCustomerRole(customerRole);
 
                 //activity log
-                _customerActivityService.InsertActivity("DeleteCustomerRole", _localizationService.GetResource("ActivityLog.DeleteCustomerRole"), customerRole.Name);
+                _customerActivityService.InsertActivity("DeleteCustomerRole",
+                    string.Format(_localizationService.GetResource("ActivityLog.DeleteCustomerRole"), customerRole.Name), customerRole);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Customers.CustomerRoles.Deleted"));
                 return RedirectToAction("List");
@@ -250,7 +253,6 @@ namespace Nop.Web.Areas.Admin.Controllers
                 ErrorNotification(exc.Message);
                 return RedirectToAction("Edit", new { id = customerRole.Id });
             }
-
 		}
 
         public virtual IActionResult AssociateProductToCustomerRolePopup()
@@ -258,9 +260,11 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageCustomers))
                 return AccessDeniedView();
 
-            var model = new CustomerRoleModel.AssociateProductToCustomerRoleModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
+            var model = new CustomerRoleModel.AssociateProductToCustomerRoleModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null
+            };
 
             //categories
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -316,9 +320,11 @@ namespace Nop.Web.Areas.Admin.Controllers
                 pageSize: command.PageSize,
                 showHidden: true
                 );
-            var gridModel = new DataSourceResult();
-            gridModel.Data = products.Select(x => x.ToModel());
-            gridModel.Total = products.TotalCount;
+            var gridModel = new DataSourceResult
+            {
+                Data = products.Select(x => x.ToModel()),
+                Total = products.TotalCount
+            };
 
             return Json(gridModel);
         }

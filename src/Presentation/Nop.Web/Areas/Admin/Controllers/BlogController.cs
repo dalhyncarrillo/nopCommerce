@@ -213,7 +213,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _blogService.InsertBlogPost(blogPost);
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewBlogPost", _localizationService.GetResource("ActivityLog.AddNewBlogPost"), blogPost.Id);
+                _customerActivityService.InsertActivity("AddNewBlogPost",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewBlogPost"), blogPost.Id), blogPost);
 
                 //search engine name
                 var seName = blogPost.ValidateSeName(model.SeName, model.Title, true);
@@ -279,7 +280,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _blogService.UpdateBlogPost(blogPost);
 
                 //activity log
-                _customerActivityService.InsertActivity("EditBlogPost", _localizationService.GetResource("ActivityLog.EditBlogPost"), blogPost.Id);
+                _customerActivityService.InsertActivity("EditBlogPost",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditBlogPost"), blogPost.Id), blogPost);
 
                 //search engine name
                 var seName = blogPost.ValidateSeName(model.SeName, model.Title, true);
@@ -319,7 +321,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _blogService.DeleteBlogPost(blogPost);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteBlogPost", _localizationService.GetResource("ActivityLog.DeleteBlogPost"), blogPost.Id);
+            _customerActivityService.InsertActivity("DeleteBlogPost",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteBlogPost"), blogPost.Id), blogPost);
 
             SuccessNotification(_localizationService.GetResource("Admin.ContentManagement.Blog.BlogPosts.Deleted"));
 			return RedirectToAction("List");
@@ -372,11 +375,13 @@ namespace Nop.Web.Areas.Admin.Controllers
             {
                 Data = comments.PagedForCommand(command).Select(blogComment =>
                 {
-                    var commentModel = new BlogCommentModel();
-                    commentModel.Id = blogComment.Id;
-                    commentModel.BlogPostId = blogComment.BlogPostId;
-                    commentModel.BlogPostTitle = blogComment.BlogPost.Title;
-                    commentModel.CustomerId = blogComment.CustomerId;
+                    var commentModel = new BlogCommentModel
+                    {
+                        Id = blogComment.Id,
+                        BlogPostId = blogComment.BlogPostId,
+                        BlogPostTitle = blogComment.BlogPost.Title,
+                        CustomerId = blogComment.CustomerId
+                    };
                     var customer = blogComment.Customer;
                     commentModel.CustomerInfo = customer.IsRegistered() ? customer.Email : _localizationService.GetResource("Admin.Customers.Guest");
                     commentModel.CreatedOn = _dateTimeHelper.ConvertToUserTime(blogComment.CreatedOnUtc, DateTimeKind.Utc);
@@ -412,7 +417,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 _eventPublisher.Publish(new BlogCommentApprovedEvent(comment));
 
             //activity log
-            _customerActivityService.InsertActivity("EditBlogComment", _localizationService.GetResource("ActivityLog.EditBlogComment"), model.Id);
+            _customerActivityService.InsertActivity("EditBlogComment",
+               string.Format(_localizationService.GetResource("ActivityLog.EditBlogComment"), comment.Id), comment);
 
             return new NullJsonResult();
         }
@@ -430,7 +436,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _blogService.DeleteBlogComment(comment);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteBlogPostComment", _localizationService.GetResource("ActivityLog.DeleteBlogPostComment"), blogPost.Id);
+            _customerActivityService.InsertActivity("DeleteBlogPostComment",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteBlogPostComment"), comment.Id), comment);
 
             return new NullJsonResult();
         }
@@ -444,13 +451,13 @@ namespace Nop.Web.Areas.Admin.Controllers
             if (selectedIds != null)
             {
                 var comments = _blogService.GetBlogCommentsByIds(selectedIds.ToArray());
-                var blogPosts = _blogService.GetBlogPostsByIds(comments.Select(p => p.BlogPostId).Distinct().ToArray());
 
                 _blogService.DeleteBlogComments(comments);
                 //activity log
                 foreach (var blogComment in comments)
                 {
-                    _customerActivityService.InsertActivity("DeleteBlogPostComment", _localizationService.GetResource("ActivityLog.DeleteBlogPostComment"), blogComment.Id);
+                    _customerActivityService.InsertActivity("DeleteBlogPostComment",
+                        string.Format(_localizationService.GetResource("ActivityLog.DeleteBlogPostComment"), blogComment.Id), blogComment);
                 }
             }
 
@@ -477,7 +484,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                     _eventPublisher.Publish(new BlogCommentApprovedEvent(blogComment));
 
                     //activity log
-                    _customerActivityService.InsertActivity("EditBlogComment", _localizationService.GetResource("ActivityLog.EditBlogComment"), blogComment.Id);
+                    _customerActivityService.InsertActivity("EditBlogComment",
+                        string.Format(_localizationService.GetResource("ActivityLog.EditBlogComment"), blogComment.Id), blogComment);
                 }
             }
 
@@ -501,7 +509,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                     _blogService.UpdateBlogPost(blogComment.BlogPost);
 
                     //activity log
-                    _customerActivityService.InsertActivity("EditBlogComment", _localizationService.GetResource("ActivityLog.EditBlogComment"), blogComment.Id);
+                    _customerActivityService.InsertActivity("EditBlogComment",
+                        string.Format(_localizationService.GetResource("ActivityLog.EditBlogComment"), blogComment.Id), blogComment);
                 }
             }
 

@@ -1,6 +1,7 @@
-﻿@model VendorModel
+@model VendorModel
 
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.VendorDetailsNotesTop, additionalData = Model })
     <div class="panel panel-default">
         <div class="panel-body">
             <div id="vendornotes-grid"></div>
@@ -105,9 +106,10 @@
             </div>
         </div>
     </div>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.VendorDetailsNotesBottom, additionalData = Model })
 </div>
 
-<script type="text/javascript">
+<script>
     $(document).ready(function() {
         $('#addVendorNote').click(function() {
             var vendorNoteMessage = $("#@Html.IdFor(model => model.AddVendorNoteMessage)").val();

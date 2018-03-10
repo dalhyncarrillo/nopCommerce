@@ -1875,17 +1875,24 @@ label, label + * {
 }
 .overview .delivery,
 .variant-overview .delivery {
-	margin: 25px 0;
 	overflow: hidden;
 }
-.overview .free-shipping,
+.overview .free-shipping, 
 .variant-overview .free-shipping {
-	display: inline-block;
-	margin: 0 0 10px;
+	display: none;
+	margin: 10px 0;
 	background: url('../images/shipping.png') left center no-repeat;
 	padding: 2px 0 2px 28px;
 	font-weight: bold;
 	color: #444;
+}
+.overview .free-shipping.visible,
+.variant-overview .free-shipping.visible {
+    display: inline-block;
+}
+.overview .delivery-date,
+.variant-overview .delivery-date {
+    margin: 10px 0;
 }
 .overview .min-qty-notification,
 .variant-overview .min-qty-notification {
@@ -2784,16 +2791,15 @@ label, label + * {
 	color: #4ab2f1;
 }
 
-.apply-vendor-page .accept-terms-of-service {
-    margin: 0 0 20px;
+.apply-vendor-page .terms-of-service {
     text-align: center;
 }
-.apply-vendor-page .accept-terms-of-service > * {
+.apply-vendor-page .terms-of-service > * {
     display: inline-block;
     line-height: 32px;
 }
-.apply-vendor-page .accept-terms-of-service span,
-.apply-vendor-page .accept-terms-of-service a {
+.apply-vendor-page .terms-of-service span,
+.apply-vendor-page .terms-of-service a {
     color: #4ab2f1;
     cursor: pointer;
 }
@@ -2822,6 +2828,9 @@ label, label + * {
     max-width: 126px;
 }
 .date-of-birth select + select {
+	margin: 0 0 0 10px;
+}
+.date-of-birth .select-wrapper + .select-wrapper {
 	margin: 0 0 0 10px;
 }
 #check-availability-button {
@@ -3408,6 +3417,14 @@ label, label + * {
 
 .cart-footer .checkout-buttons {
 	padding: 0 10px;
+}
+.cart-footer .checkout-disabled {
+    font-size: 20px;
+    text-align: center;
+    background: #ffa500;
+    border: 1px solid #c3891e;
+    color: #fff;
+    padding: 15px 50px;
 }
 .cart-footer .checkout-button {
 	display: inline-block;
@@ -4057,10 +4074,10 @@ label, label + * {
     padding: 30px 15px;
 	text-align: center;
 }
-.sitemap-page ul {
+.sitemap-page .entity ul {
 	font-size: 0;
 }
-.sitemap-page li {
+.sitemap-page .entity li {
 	display: inline-block;
 	position: relative;
 	margin: 0 8px;
@@ -4068,7 +4085,7 @@ label, label + * {
 	line-height: 50px;
 	font-size: 14px; /*reset zeroing*/
 }
-.sitemap-page li:before {
+.sitemap-page .entity li:before {
 	content: "";
 	position: absolute;
 	top: 23px;
@@ -4077,13 +4094,13 @@ label, label + * {
 	height: 5px;
 	background-color: #ddd;
 }
-.sitemap-page a {
+.sitemap-page .entity a {
 	color: #444;
 }
-.sitemap-page a:hover {
+.sitemap-page .entity a:hover {
 	color: #4ab2f1;
 }
-.sitemap-page a:empty {
+.sitemap-page .entity a:empty {
 	display: none;
 }
 

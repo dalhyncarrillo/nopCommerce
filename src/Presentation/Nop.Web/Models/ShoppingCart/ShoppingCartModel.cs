@@ -43,6 +43,7 @@ namespace Nop.Web.Models.ShoppingCart
         public IList<string> ButtonPaymentMethodViewComponentNames { get; set; }
 
         public bool HideCheckoutButton { get; set; }
+        public bool ShowVendorName { get; set; }
 
         #region Nested Classes
 
@@ -54,7 +55,10 @@ namespace Nop.Web.Models.ShoppingCart
                 AllowedQuantities = new List<SelectListItem>();
                 Warnings = new List<string>();
             }
+
             public string Sku { get; set; }
+
+            public string VendorName { get; set; }
 
             public PictureModel Picture {get;set;}
 
@@ -85,7 +89,6 @@ namespace Nop.Web.Models.ShoppingCart
             public bool DisableRemoval { get; set; }
 
             public IList<string> Warnings { get; set; }
-
         }
 
         public partial class CheckoutAttributeModel : BaseNopEntityModel
@@ -187,6 +190,7 @@ namespace Nop.Web.Models.ShoppingCart
 
             public Dictionary<string, object> CustomValues { get; set; }
         }
+
         #endregion
     }
 }

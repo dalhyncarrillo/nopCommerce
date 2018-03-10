@@ -10,7 +10,7 @@
 }
 @if (Model.CountryEnabled && Model.StateProvinceEnabled)
 {
-    <script type="text/javascript">
+    <script asp-location="Footer">
         $(document).ready(function () {
             $("#@Html.IdFor(model => model.CountryId)").change(function () {
                 var selectedItem = $(this).val();
@@ -91,6 +91,7 @@
                                 asp-selected-day="@Model.DateOfBirthDay"
                                 asp-selected-month="@Model.DateOfBirthMonth"
                                 asp-selected-year="@Model.DateOfBirthYear"
+                                asp-localize-labels="true"
                             />
                             @if (Model.DateOfBirthRequired)
                             {
@@ -162,8 +163,12 @@
                     </div>
                 </div>
             }
-            @if (Model.StreetAddressEnabled || Model.StreetAddress2Enabled || Model.ZipPostalCodeEnabled
-             || Model.CityEnabled || Model.CountryEnabled)
+            @if (Model.StreetAddressEnabled ||
+                Model.StreetAddress2Enabled || 
+                Model.ZipPostalCodeEnabled || 
+                Model.CityEnabled || 
+                Model.CountyEnabled || 
+                Model.CountryEnabled)
             {
                 <div class="fieldset">
                     <div class="title">
@@ -204,6 +209,18 @@
                                     <nop-required />
                                 }
                                 <span asp-validation-for="ZipPostalCode"></span>
+                            </div>
+                        }
+                        @if (Model.CountyEnabled)
+                        {
+                            <div class="inputs">
+                                <label asp-for="County" asp-postfix=":"></label>
+                                <input asp-for="County" />
+                                @if (Model.CountyRequired)
+                                {
+                                    <nop-required />
+                                }
+                                <span asp-validation-for="County"></span>
                             </div>
                         }
                         @if (Model.CityEnabled)
@@ -326,46 +343,44 @@
                 </div>
                 <div class="form-fields">
                     <div class="inputs">
-                        <div class="inputs">
-                            <label asp-for="Password" asp-postfix=":"></label>
-                            <input asp-for="Password" />
-                            <nop-required />
-                            <span asp-validation-for="Password"></span>
-                        </div>
-                        <div class="inputs">
-                            <label asp-for="ConfirmPassword" asp-postfix=":"></label>
-                            <input asp-for="ConfirmPassword" />
-                            <nop-required />
-                            <span asp-validation-for="ConfirmPassword"></span>
-                        </div>
-                        @if (Model.DisplayCaptcha)
-                        {
-                            <div class="captcha-box">
-                                <nop-captcha />
-                            </div>
-                        }
-                        @if (Model.HoneypotEnabled)
-                        {
-                            @Html.Raw(Html.GenerateHoneypotInput())
-                        }
+                        <label asp-for="Password" asp-postfix=":"></label>
+                        <input asp-for="Password" />
+                        <nop-required />
+                        <span asp-validation-for="Password"></span>
                     </div>
+                    <div class="inputs">
+                        <label asp-for="ConfirmPassword" asp-postfix=":"></label>
+                        <input asp-for="ConfirmPassword" />
+                        <nop-required />
+                        <span asp-validation-for="ConfirmPassword"></span>
+                    </div>
+                    @if (Model.DisplayCaptcha)
+                    {
+                        <div class="captcha-box">
+                            <nop-captcha />
+                        </div>
+                    }
+                    @if (Model.HoneypotEnabled)
+                    {
+                        @Html.Raw(Html.GenerateHoneypotInput())
+                    }
                 </div>
                 @if (Model.AcceptPrivacyPolicyEnabled)
                 {
-                    <script type="text/javascript">
-                    $(document).ready(function() {
-                        $('#register-button').click(function() {
-                            if ($('#accept-privacy-policy').is(':checked')) {
-                                //do some stuff
-                                return true;
-                            } else {
-                                //just show validation errors, dont post
-                                alert(
-                                    '@Html.Raw(JavaScriptEncoder.Default.Encode(T("Account.Fields.AcceptPrivacyPolicy.Required").Text))');
-                                return false;
-                            }
+                    <script asp-location="Footer">
+                        $(document).ready(function() {
+                            $('#register-button').click(function() {
+                                if ($('#accept-privacy-policy').is(':checked')) {
+                                    //do some stuff
+                                    return true;
+                                } else {
+                                    //just show validation errors, dont post
+                                    alert(
+                                        '@Html.Raw(JavaScriptEncoder.Default.Encode(T("Account.Fields.AcceptPrivacyPolicy.Required").Text))');
+                                    return false;
+                                }
+                            });
                         });
-                    });
                     </script>
                     <div class="accept-privacy-policy">
                         <input id="accept-privacy-policy" type="checkbox" name="accept-privacy-policy" />
@@ -373,7 +388,7 @@
                         @if (Model.AcceptPrivacyPolicyPopup)
                         {
                             <span class="read" id="read-privacyinfo">@T("Account.Fields.AcceptPrivacyPolicy.Read")</span>
-                            <script>
+                            <script asp-location="Footer">
                                 $(document).ready(function() {
                                     $('#read-privacyinfo').on('click',
                                         function(e) {
@@ -394,9 +409,9 @@
             <div class="buttons">
                 <input type="submit" id="register-button" class="button-1 register-next-step-button" value="@T("Account.Register.Button")" name="register-button" />
             </div>
-            <div class="external-authentication">
-                @await Component.InvokeAsync("ExternalMethods", "ExternalAuthentication")
-            </div>
         </form>
+        <div class="external-authentication">
+            @await Component.InvokeAsync("ExternalMethods", "ExternalAuthentication")
+        </div>
     </div>
 </div>

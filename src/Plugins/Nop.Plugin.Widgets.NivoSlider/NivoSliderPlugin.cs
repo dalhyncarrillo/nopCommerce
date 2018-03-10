@@ -6,6 +6,7 @@ using Nop.Services.Cms;
 using Nop.Services.Configuration;
 using Nop.Services.Localization;
 using Nop.Services.Media;
+using Nop.Web.Framework.Infrastructure;
 
 namespace Nop.Plugin.Widgets.NivoSlider
 {
@@ -32,7 +33,7 @@ namespace Nop.Plugin.Widgets.NivoSlider
         /// <returns>Widget zones</returns>
         public IList<string> GetWidgetZones()
         {
-            return new List<string> { "home_page_top" };
+            return new List<string> { PublicWidgetZones.HomePageTop };
         }
 
         /// <summary>
@@ -44,13 +45,13 @@ namespace Nop.Plugin.Widgets.NivoSlider
         }
 
         /// <summary>
-        /// Gets a view component for displaying plugin in public store
+        /// Gets a name of a view component for displaying widget
         /// </summary>
         /// <param name="widgetZone">Name of the widget zone</param>
-        /// <param name="viewComponentName">View component name</param>
-        public void GetPublicViewComponent(string widgetZone, out string viewComponentName)
+        /// <returns>View component name</returns>
+        public string GetWidgetViewComponentName(string widgetZone)
         {
-            viewComponentName = "WidgetsNivoSlider";
+            return "WidgetsNivoSlider";
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
-﻿@model ProductModel.ProductAttributeMappingModel
+@model ProductModel.ProductAttributeMappingModel
 
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductAttributeMappingDetailsValuesTop, additionalData = Model })
     <div class="panel panel-default">
     @if (Model.Id > 0)
     {
@@ -127,7 +128,7 @@
                 @T("Admin.Catalog.Products.ProductAttributes.Attributes.Values.AddNew")
             </button>
             <input type="submit" id="btnRefresh" style="display: none"/>
-            <script type="text/javascript">
+            <script>
                 $(document).ready(function() {
                     $('#btnRefresh').click(function() {
                         //refresh grid
@@ -148,4 +149,5 @@
         </div>
     }
     </div>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.ProductAttributeMappingDetailsValuesBottom, additionalData = Model })
 </div>

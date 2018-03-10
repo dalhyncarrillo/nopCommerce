@@ -1,10 +1,11 @@
-﻿@model GiftCardModel
+@model GiftCardModel
 @inject AdminAreaSettings adminAreaSettings
 @{
     var defaultGridPageSize = adminAreaSettings.DefaultGridPageSize;
     var gridPageSizes = adminAreaSettings.GridPageSizes;
 }
 <div class="panel-group">
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.GiftCardDetailsHistoryTop, additionalData = Model })
     <div class="panel panel-default">
         <div class="panel-body">
             <div id="usagehistory-grid"></div>
@@ -72,4 +73,5 @@
             </script>
         </div>
     </div>
+    @await Component.InvokeAsync("AdminWidget", new { widgetZone = AdminWidgetZones.GiftCardDetailsHistoryBottom, additionalData = Model })
 </div>

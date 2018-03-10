@@ -60,7 +60,7 @@ namespace Nop.Web.Areas.Admin.Controllers
         
         #endregion
         
-        #region Constructors
+        #region Ctor
 
         public CategoryController(ICategoryService categoryService, ICategoryTemplateService categoryTemplateService,
             IManufacturerService manufacturerService, IProductService productService, 
@@ -116,29 +116,29 @@ namespace Nop.Web.Areas.Admin.Controllers
             foreach (var localized in model.Locales)
             {
                 _localizedEntityService.SaveLocalizedValue(category,
-                                                               x => x.Name,
-                                                               localized.Name,
-                                                               localized.LanguageId);
+                    x => x.Name,
+                    localized.Name,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(category,
-                                                           x => x.Description,
-                                                           localized.Description,
-                                                           localized.LanguageId);
+                    x => x.Description,
+                    localized.Description,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(category,
-                                                           x => x.MetaKeywords,
-                                                           localized.MetaKeywords,
-                                                           localized.LanguageId);
+                    x => x.MetaKeywords,
+                    localized.MetaKeywords,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(category,
-                                                           x => x.MetaDescription,
-                                                           localized.MetaDescription,
-                                                           localized.LanguageId);
+                    x => x.MetaDescription,
+                    localized.MetaDescription,
+                    localized.LanguageId);
 
                 _localizedEntityService.SaveLocalizedValue(category,
-                                                           x => x.MetaTitle,
-                                                           localized.MetaTitle,
-                                                           localized.LanguageId);
+                    x => x.MetaTitle,
+                    localized.MetaTitle,
+                    localized.LanguageId);
 
                 //search engine name
                 var seName = category.ValidateSeName(localized.SeName, localized.Name, false);
@@ -398,7 +398,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 SaveStoreMappings(category, model);
 
                 //activity log
-                _customerActivityService.InsertActivity("AddNewCategory", _localizationService.GetResource("ActivityLog.AddNewCategory"), category.Name);
+                _customerActivityService.InsertActivity("AddNewCategory",
+                    string.Format(_localizationService.GetResource("ActivityLog.AddNewCategory"), category.Name), category);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Categories.Added"));
 
@@ -474,7 +475,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             if (ModelState.IsValid)
             {
-                int prevPictureId = category.PictureId;
+                var prevPictureId = category.PictureId;
                 category = model.ToEntity(category);
                 category.UpdatedOnUtc = DateTime.UtcNow;
                 _categoryService.UpdateCategory(category);
@@ -516,7 +517,8 @@ namespace Nop.Web.Areas.Admin.Controllers
                 SaveStoreMappings(category, model);
 
                 //activity log
-                _customerActivityService.InsertActivity("EditCategory", _localizationService.GetResource("ActivityLog.EditCategory"), category.Name);
+                _customerActivityService.InsertActivity("EditCategory",
+                    string.Format(_localizationService.GetResource("ActivityLog.EditCategory"), category.Name), category);
 
                 SuccessNotification(_localizationService.GetResource("Admin.Catalog.Categories.Updated"));
                 if (continueEditing)
@@ -559,7 +561,8 @@ namespace Nop.Web.Areas.Admin.Controllers
             _categoryService.DeleteCategory(category);
 
             //activity log
-            _customerActivityService.InsertActivity("DeleteCategory", _localizationService.GetResource("ActivityLog.DeleteCategory"), category.Name);
+            _customerActivityService.InsertActivity("DeleteCategory",
+                string.Format(_localizationService.GetResource("ActivityLog.DeleteCategory"), category.Name), category);
 
             SuccessNotification(_localizationService.GetResource("Admin.Catalog.Categories.Deleted"));
             return RedirectToAction("List");
@@ -594,7 +597,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             try
             {
-                var bytes = _exportManager.ExportCategoriesToXlsx(_categoryService.GetAllCategories(showHidden: true).Where(p => !p.Deleted));
+                var bytes = _exportManager.ExportCategoriesToXlsx(_categoryService.GetAllCategories(showHidden: true, loadCacheableCopy: false).ToList());
                 return File(bytes, MimeTypes.TextXlsx, "categories.xlsx");
             }
             catch (Exception exc)
@@ -634,6 +637,7 @@ namespace Nop.Web.Areas.Admin.Controllers
                 return RedirectToAction("List");
             }
         }
+
         #endregion
         
         #region Products
@@ -763,7 +767,7 @@ namespace Nop.Web.Areas.Admin.Controllers
 
             if (model.SelectedProductIds != null)
             {
-                foreach (int id in model.SelectedProductIds)
+                foreach (var id in model.SelectedProductIds)
                 {
                     var product = _productService.GetProductById(id);
                     if (product != null)

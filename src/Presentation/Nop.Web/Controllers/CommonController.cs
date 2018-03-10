@@ -49,7 +49,7 @@ namespace Nop.Web.Controllers
         
         #endregion
         
-        #region Constructors
+        #region Ctor
 
         public CommonController(ICommonModelFactory commonModelFactory,
             ILanguageService languageService,
@@ -103,8 +103,8 @@ namespace Nop.Web.Controllers
                     customer: _workContext.CurrentCustomer);
             }
 
-            this.Response.StatusCode = 404;
-            this.Response.ContentType = "text/html";
+            Response.StatusCode = 404;
+            Response.ContentType = "text/html";
 
             return View();
         }
@@ -120,7 +120,7 @@ namespace Nop.Web.Controllers
                 language = _workContext.WorkingLanguage;
 
             //home page
-            if (String.IsNullOrEmpty(returnUrl))
+            if (string.IsNullOrEmpty(returnUrl))
                 returnUrl = Url.RouteUrl("HomePage");
 
             //prevent open redirection attack
@@ -152,7 +152,7 @@ namespace Nop.Web.Controllers
                 _workContext.WorkingCurrency = currency;
 
             //home page
-            if (String.IsNullOrEmpty(returnUrl))
+            if (string.IsNullOrEmpty(returnUrl))
                 returnUrl = Url.RouteUrl("HomePage");
 
             //prevent open redirection attack
@@ -170,7 +170,7 @@ namespace Nop.Web.Controllers
             _workContext.TaxDisplayType = taxDisplayType;
 
             //home page
-            if (String.IsNullOrEmpty(returnUrl))
+            if (string.IsNullOrEmpty(returnUrl))
                 returnUrl = Url.RouteUrl("HomePage");
 
             //prevent open redirection attack
@@ -179,7 +179,6 @@ namespace Nop.Web.Controllers
 
             return Redirect(returnUrl);
         }
-
 
         //contact us page
         [HttpsRequirement(SslRequirement.Yes)]
@@ -191,6 +190,7 @@ namespace Nop.Web.Controllers
             model = _commonModelFactory.PrepareContactUsModel(model, false);
             return View(model);
         }
+
         [HttpPost, ActionName("ContactUs")]
         [PublicAntiForgery]
         [ValidateCaptcha]
@@ -208,8 +208,8 @@ namespace Nop.Web.Controllers
 
             if (ModelState.IsValid)
             {
-                string subject = _commonSettings.SubjectFieldOnContactUsForm ? model.Subject : null;
-                string body = Core.Html.HtmlHelper.FormatText(model.Enquiry, false, true, false, false, false, false);
+                var subject = _commonSettings.SubjectFieldOnContactUsForm ? model.Subject : null;
+                var body = Core.Html.HtmlHelper.FormatText(model.Enquiry, false, true, false, false, false, false);
 
                 _workflowMessageService.SendContactUsMessage(_workContext.WorkingLanguage.Id,
                     model.Email.Trim(), model.FullName, subject, body);
@@ -218,13 +218,15 @@ namespace Nop.Web.Controllers
                 model.Result = _localizationService.GetResource("ContactUs.YourEnquiryHasBeenSent");
 
                 //activity log
-                _customerActivityService.InsertActivity("PublicStore.ContactUs", _localizationService.GetResource("ActivityLog.PublicStore.ContactUs"));
+                _customerActivityService.InsertActivity("PublicStore.ContactUs", 
+                    _localizationService.GetResource("ActivityLog.PublicStore.ContactUs"));
 
                 return View(model);
             }
 
             return View(model);
         }
+
         //contact vendor page
         [HttpsRequirement(SslRequirement.Yes)]
         public virtual IActionResult ContactVendor(int vendorId)
@@ -240,6 +242,7 @@ namespace Nop.Web.Controllers
             model = _commonModelFactory.PrepareContactVendorModel(model, vendor, false);
             return View(model);
         }
+
         [HttpPost, ActionName("ContactVendor")]
         [PublicAntiForgery]
         [ValidateCaptcha]
@@ -262,8 +265,8 @@ namespace Nop.Web.Controllers
 
             if (ModelState.IsValid)
             {
-                string subject = _commonSettings.SubjectFieldOnContactUsForm ? model.Subject : null;
-                string body = Core.Html.HtmlHelper.FormatText(model.Enquiry, false, true, false, false, false, false);
+                var subject = _commonSettings.SubjectFieldOnContactUsForm ? model.Subject : null;
+                var body = Core.Html.HtmlHelper.FormatText(model.Enquiry, false, true, false, false, false, false);
 
                 _workflowMessageService.SendContactVendorMessage(vendor, _workContext.WorkingLanguage.Id,
                     model.Email.Trim(), model.FullName, subject, body);
@@ -279,12 +282,12 @@ namespace Nop.Web.Controllers
 
         //sitemap page
         [HttpsRequirement(SslRequirement.No)]
-        public virtual IActionResult Sitemap()
+        public virtual IActionResult Sitemap(SitemapPageModel pageModel)
         {
             if (!_commonSettings.SitemapEnabled)
                 return RedirectToRoute("HomePage");
 
-            var model = _commonModelFactory.PrepareSitemapModel();
+            var model = _commonModelFactory.PrepareSitemapModel(pageModel);
             return View(model);
         }
 
@@ -306,7 +309,7 @@ namespace Nop.Web.Controllers
             _themeContext.WorkingThemeName = themeName;
 
             //home page
-            if (String.IsNullOrEmpty(returnUrl))
+            if (string.IsNullOrEmpty(returnUrl))
                 returnUrl = Url.RouteUrl("HomePage");
 
             //prevent open redirection attack
@@ -369,7 +372,7 @@ namespace Nop.Web.Controllers
             }
 
             //home page
-            if (String.IsNullOrEmpty(url))
+            if (string.IsNullOrEmpty(url))
             {
                 url = Url.RouteUrl("HomePage");
                 permanentRedirect = false;
@@ -384,8 +387,8 @@ namespace Nop.Web.Controllers
 
             if (permanentRedirect)
                 return RedirectPermanent(url);
-            else
-                return Redirect(url);
+
+            return Redirect(url);
         }
 
         #endregion

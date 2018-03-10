@@ -30,14 +30,11 @@ namespace Nop.Web.Areas.Admin.Models.Customers
         [NopResourceDisplayName("Admin.Customers.Customers.List.SearchLastName")]
         public string SearchLastName { get; set; }
 
-
         [NopResourceDisplayName("Admin.Customers.Customers.List.SearchDateOfBirth")]
         public string SearchDayOfBirth { get; set; }
         [NopResourceDisplayName("Admin.Customers.Customers.List.SearchDateOfBirth")]
         public string SearchMonthOfBirth { get; set; }
         public bool DateOfBirthEnabled { get; set; }
-
-
 
         [NopResourceDisplayName("Admin.Customers.Customers.List.SearchCompany")]
         public string SearchCompany { get; set; }
@@ -53,5 +50,7 @@ namespace Nop.Web.Areas.Admin.Models.Customers
 
         [NopResourceDisplayName("Admin.Customers.Customers.List.SearchIpAddress")]
         public string SearchIpAddress { get; set; }
+
+        public bool AvatarEnabled { get; internal set; }
     }
 }

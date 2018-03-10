@@ -66,7 +66,6 @@ namespace Nop.Web.Models.Catalog
         public bool FreeShippingNotificationEnabled { get; set; }
         public string DeliveryDate { get; set; }
 
-
         public bool IsRental { get; set; }
         public DateTime? RentalStartDate { get; set; }
         public DateTime? RentalEndDate { get; set; }
@@ -142,7 +141,7 @@ namespace Nop.Web.Models.Catalog
             public bool CustomerEntersPrice { get; set; }
             [NopResourceDisplayName("Products.EnterProductPrice")]
             public decimal CustomerEnteredPrice { get; set; }
-            public String CustomerEnteredPriceRange { get; set; }
+            public string CustomerEnteredPriceRange { get; set; }
 
             public bool DisableBuyButton { get; set; }
             public bool DisableWishlistButton { get; set; }
@@ -276,7 +275,6 @@ namespace Nop.Web.Models.Catalog
             public AttributeControlType AttributeControlType { get; set; }
 
             public IList<ProductAttributeValueModel> Values { get; set; }
-
         }
 
         public partial class ProductAttributeValueModel : BaseNopEntityModel
@@ -294,6 +292,8 @@ namespace Nop.Web.Models.Catalog
             public PictureModel ImageSquaresPictureModel { get; set; }
 
             public string PriceAdjustment { get; set; }
+            
+            public bool PriceAdjustmentUsePercentage { get; set; }
 
             public decimal PriceAdjustmentValue { get; set; }
 
@@ -307,6 +307,6 @@ namespace Nop.Web.Models.Catalog
             public int Quantity { get; set; }
         }
 
-#endregion
+        #endregion
     }
 }
